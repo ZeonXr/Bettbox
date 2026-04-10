@@ -126,6 +126,49 @@ jobs:
           dart run build_runner build -d
           dart setup.dart ${{ matrix.platform }} --arch ${{ matrix.arch }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} ${{ matrix.compatible == true && '--compatible' || '' }}
       
+      - name: Verify Windows PE Architecture
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $expectedArch = '${{ matrix.arch }}'
+          # Map matrix arch to expected PE machine value
+          $expectedMachine = switch ($expectedArch) {
+            'arm64' { 0xAA64 }
+            'amd64' { 0x8664 }
+            default { $null }
+          }
+
+          $allPassed = $true
+          Get-ChildItem -Path dist -Recurse -Filter "*.exe" | ForEach-Object {
+            $exe = $_
+            $bytes = [System.IO.File]::ReadAllBytes($exe.FullName)
+            $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+            $machine  = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+            $machineHex = '0x{0:X4}' -f $machine
+
+            # Inno Setup setup.exe bootstrappers are always x86 (0x014C);
+            # that is expected and harmless because Windows runs x86 code on
+            # every architecture via WoW.  The critical files are the actual
+            # application binaries bundled inside.
+            if ($exe.Name -like '*setup.exe' -and $machine -eq 0x014C) {
+              Write-Host "$($exe.Name): $machineHex (x86 installer bootstrapper - OK)" -ForegroundColor Green
+              return
+            }
+
+            if ($null -ne $expectedMachine -and $machine -ne $expectedMachine) {
+              $expectedHex = '0x{0:X4}' -f $expectedMachine
+              Write-Host "$($exe.Name): $machineHex - MISMATCH (expected $expectedHex for $expectedArch)" -ForegroundColor Red
+              $allPassed = $false
+            } else {
+              Write-Host "$($exe.Name): $machineHex - OK" -ForegroundColor Green
+            }
+          }
+
+          if (-not $allPassed) {
+            Write-Error "Architecture verification failed: one or more EXEs have the wrong machine type."
+            exit 1
+          }
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:

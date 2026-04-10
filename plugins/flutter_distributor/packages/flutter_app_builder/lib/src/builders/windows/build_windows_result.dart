@@ -35,12 +35,19 @@ class BuildWindowsResult extends BuildResult {
 
   String get arch {
     if (_arch == null) {
-      final processorArchitecture =
-          Platform.environment['PROCESSOR_ARCHITECTURE'];
-      if (processorArchitecture?.toUpperCase() == 'ARM64') {
-        _arch = 'arm64';
+      // Prefer the explicit target-platform build argument so that cross-
+      // compilation (e.g. building windows-arm64 on an x64 host) is handled
+      // correctly.
+      final targetPlatform =
+          config.arguments['target-platform']?.toString();
+      if (targetPlatform != null) {
+        _arch = targetPlatform.contains('arm64') ? 'arm64' : 'x64';
       } else {
-        _arch = 'x64';
+        // Fall back to the host machine architecture.
+        final processorArchitecture =
+            Platform.environment['PROCESSOR_ARCHITECTURE'];
+        _arch =
+            processorArchitecture?.toUpperCase() == 'ARM64' ? 'arm64' : 'x64';
       }
     }
     return _arch!;

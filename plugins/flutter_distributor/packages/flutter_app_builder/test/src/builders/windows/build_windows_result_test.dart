@@ -37,5 +37,25 @@ void main() {
       r.flutterVersion = const FlutterVersion(flutterVersion: '3.10.0');
       expect(r.outputDirectory.path, 'build/windows/runner/Release');
     });
+    test('arm64 via target-platform argument', () {
+      final r = BuildWindowsResult(
+        BuildConfig(
+          arguments: {'target-platform': 'windows-arm64'},
+        ),
+      );
+      r.flutterVersion = const FlutterVersion(flutterVersion: '3.16.0');
+      expect(r.arch, 'arm64');
+      expect(r.outputDirectory.path, 'build/windows/arm64/runner/Release');
+    });
+    test('x64 via target-platform argument', () {
+      final r = BuildWindowsResult(
+        BuildConfig(
+          arguments: {'target-platform': 'windows-x64'},
+        ),
+      );
+      r.flutterVersion = const FlutterVersion(flutterVersion: '3.16.0');
+      expect(r.arch, 'x64');
+      expect(r.outputDirectory.path, 'build/windows/x64/runner/Release');
+    });
   });
 }
