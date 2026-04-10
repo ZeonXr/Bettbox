@@ -114,12 +114,21 @@ jobs:
           cache-dependency-path: core/go.sum
 
       - name: Setup Flutter
+        if: matrix.os != 'ubuntu-24.04-arm' && matrix.os != 'windows-11-arm'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && '3.41.x' || '3.35.7' }}
+          flutter-version: '3.35.7'
+
+      - name: Setup Flutter (Latest for specific OS)
+        if: matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
