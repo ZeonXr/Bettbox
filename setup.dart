@@ -248,17 +248,38 @@ class Build {
     return corePaths;
   }
 
-  static Future<void> buildHelper(Target target, String token) async {
+  static Future<void> buildHelper(Target target, String token, {Arch? arch}) async {
+    final List<String> buildArgs = [
+      'cargo',
+      'build',
+      '--release',
+      '--features',
+      'windows-service',
+    ];
+
+    // Use explicit ARM64 target so the binary is always in a predictable path
+    final isWindowsArm64 = arch == Arch.arm64 && target == Target.windows;
+    if (isWindowsArm64) {
+      buildArgs.addAll(['--target', 'aarch64-pc-windows-msvc']);
+    }
+
     await exec(
-      ['cargo', 'build', '--release', '--features', 'windows-service'],
+      buildArgs,
       environment: {'TOKEN': token},
       name: 'build helper',
       workingDirectory: _servicesDir,
     );
+
+    // Output path differs when an explicit --target is used
+    final String releasePath;
+    if (isWindowsArm64) {
+      releasePath = join(_servicesDir, 'target', 'aarch64-pc-windows-msvc', 'release');
+    } else {
+      releasePath = join(_servicesDir, 'target', 'release');
+    }
+
     final outPath = join(
-      _servicesDir,
-      'target',
-      'release',
+      releasePath,
       'helper${target.executableExtensionName}',
     );
     final targetPath = join(
@@ -496,10 +517,12 @@ class BuildCommand extends Command {
         final token = target != Target.android
             ? await Build.calcSha256(corePaths.first)
             : null;
-        Build.buildHelper(target, token!);
+        Build.buildHelper(target, token!, arch: arch);
         _buildDistributor(
           target: target,
-          targets: 'exe',
+          // ARM64: produce a portable zip (no Inno Setup dependency on the ARM runner)
+          // amd64: produce the standard installer exe
+          targets: arch == Arch.arm64 ? 'zip' : 'exe',
           args: ' --description $desc --build-dart-define=CORE_SHA256=$token',
           env: env,
         );
