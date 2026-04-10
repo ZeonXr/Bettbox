@@ -36,7 +36,7 @@ jobs:
             os: windows-2025
             arch: amd64
           - platform: windows
-            os: windows-2025
+            os: windows-11-arm
             arch: arm64
           - platform: macos
             os: macos-15
@@ -70,11 +70,22 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: Setup Rust (Windows ARM64 native runner)
+        if: matrix.os == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          # Download the official ARM64 Rust installer from rustup.rs over HTTPS.
+          # win.rustup.rs serves the canonical rustup-init.exe signed by the Rust project.
+          Invoke-WebRequest -Uri "https://win.rustup.rs/aarch64" -OutFile rustup-init.exe
+          .\rustup-init.exe -y --default-toolchain stable
+          $cargoPath = "$env:USERPROFILE\.cargo\bin"
+          Add-Content $env:GITHUB_PATH $cargoPath
+
       - name: Setup Rust
-        if: matrix.platform == 'windows'
+        if: matrix.platform == 'windows' && matrix.os != 'windows-11-arm'
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.arch == 'arm64' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}
+          targets: x86_64-pc-windows-msvc
 
       - name: Setup Keystore
         if: matrix.platform == 'android'
@@ -107,10 +118,10 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ matrix.os == 'ubuntu-24.04-arm' && 'master' || 'stable' }}
+          channel: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && 'master' || 'stable' }}
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version: ${{ matrix.os == 'ubuntu-24.04-arm' && '' || '3.35.7' }}
+          flutter-version: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && '' || '3.35.7' }}
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
@@ -125,6 +136,38 @@ jobs:
           flutter pub get
           dart run build_runner build -d
           dart setup.dart ${{ matrix.platform }} --arch ${{ matrix.arch }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} ${{ matrix.compatible == true && '--compatible' || '' }}
+
+      - name: Verify Windows PE Architecture
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $arch = "${{ matrix.arch }}"
+          $buildArch = if ($arch -eq "arm64") { "arm64" } else { "x64" }
+          $exePath = "build\windows\$buildArch\runner\Release\Bettbox.exe"
+
+          if (-not (Test-Path $exePath)) {
+            Write-Error "Executable not found at $exePath"
+            exit 1
+          }
+
+          $bytes = [System.IO.File]::ReadAllBytes($exePath)
+          $peOffset = [System.BitConverter]::ToInt32($bytes, 0x3C)
+          $machine  = [System.BitConverter]::ToUInt16($bytes, $peOffset + 4)
+          $machineHex = "{0:X4}" -f $machine
+
+          Write-Host "Arch: $arch | File: $exePath | PE Machine: 0x$machineHex"
+
+          # PE Machine type constants (COFF header field at offset 4 from PE signature):
+          #   0xAA64 = IMAGE_FILE_MACHINE_ARM64
+          #   0x8664 = IMAGE_FILE_MACHINE_AMD64
+          $expected = @{ "arm64" = "AA64"; "amd64" = "8664" }
+
+          if ($expected.ContainsKey($arch) -and $machineHex -ne $expected[$arch]) {
+            Write-Error "PE machine mismatch! Expected $($expected[$arch]) for $arch, got $machineHex. Aborting to prevent publishing a wrong-arch artifact."
+            exit 1
+          }
+
+          Write-Host "✓ PE machine validation passed: 0x$machineHex ($arch)"
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6

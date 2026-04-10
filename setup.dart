@@ -248,17 +248,49 @@ class Build {
     return corePaths;
   }
 
-  static Future<void> buildHelper(Target target, String token) async {
+  static Future<void> buildHelper(
+    Target target,
+    String token, {
+    Arch? arch,
+  }) async {
+    final buildArgs = [
+      'cargo',
+      'build',
+      '--release',
+      '--features',
+      'windows-service',
+    ];
+
+    // For Windows ARM64, explicitly target aarch64-pc-windows-msvc so that
+    // the helper binary is a true ARM64 PE (works both on native arm64 runner
+    // and as a cross-compile target on x64 runners).
+    if (arch == Arch.arm64 && target == Target.windows) {
+      buildArgs.addAll(['--target', 'aarch64-pc-windows-msvc']);
+    }
+
     await exec(
-      ['cargo', 'build', '--release', '--features', 'windows-service'],
+      buildArgs,
       environment: {'TOKEN': token},
       name: 'build helper',
       workingDirectory: _servicesDir,
     );
+
+    // When --target is specified cargo places output under target/<triple>/release
+    // rather than target/release.
+    final String releasePath;
+    if (arch == Arch.arm64 && target == Target.windows) {
+      releasePath = join(
+        _servicesDir,
+        'target',
+        'aarch64-pc-windows-msvc',
+        'release',
+      );
+    } else {
+      releasePath = join(_servicesDir, 'target', 'release');
+    }
+
     final outPath = join(
-      _servicesDir,
-      'target',
-      'release',
+      releasePath,
       'helper${target.executableExtensionName}',
     );
     final targetPath = join(
@@ -496,10 +528,10 @@ class BuildCommand extends Command {
         final token = target != Target.android
             ? await Build.calcSha256(corePaths.first)
             : null;
-        Build.buildHelper(target, token!);
+        Build.buildHelper(target, token!, arch: arch);
         _buildDistributor(
           target: target,
-          targets: 'exe',
+          targets: 'exe,zip',
           args: ' --description $desc --build-dart-define=CORE_SHA256=$token',
           env: env,
         );
