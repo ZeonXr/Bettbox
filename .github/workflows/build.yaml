@@ -36,7 +36,7 @@ jobs:
             os: windows-2025
             arch: amd64
           - platform: windows
-            os: windows-2025
+            os: windows-11-arm
             arch: arm64
           - platform: macos
             os: macos-15
@@ -70,11 +70,20 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
-      - name: Setup Rust
-        if: matrix.platform == 'windows'
+      - name: Setup Rust (Windows ARM64 native)
+        if: matrix.platform == 'windows' && matrix.os == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://win.rustup.rs/aarch64" -OutFile rustup-init.exe
+          .\rustup-init.exe -y --default-toolchain stable
+          $cargoPath = "$env:USERPROFILE\.cargo\bin"
+          Add-Content $env:GITHUB_PATH $cargoPath
+
+      - name: Setup Rust (Windows x64)
+        if: matrix.platform == 'windows' && matrix.os != 'windows-11-arm'
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.arch == 'arm64' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}
+          targets: x86_64-pc-windows-msvc
 
       - name: Setup Keystore
         if: matrix.platform == 'android'
@@ -107,10 +116,10 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ matrix.os == 'ubuntu-24.04-arm' && 'master' || 'stable' }}
+          channel: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && 'master' || 'stable' }}
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version: ${{ matrix.os == 'ubuntu-24.04-arm' && '' || '3.35.7' }}
+          flutter-version: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && '' || '3.35.7' }}
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
@@ -125,6 +134,33 @@ jobs:
           flutter pub get
           dart run build_runner build -d
           dart setup.dart ${{ matrix.platform }} --arch ${{ matrix.arch }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} ${{ matrix.compatible == true && '--compatible' || '' }}
+
+      - name: Verify Windows ARM64 PE machine type
+        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          $exePath = Get-ChildItem -Recurse -Filter "Bettbox.exe" "dist" | Select-Object -First 1
+          if (-not $exePath) {
+            # Fall back to checking the zip artifact
+            $zipFile = Get-ChildItem -Recurse -Filter "*.zip" "dist" | Select-Object -First 1
+            if ($zipFile) {
+              $extractDir = Join-Path $env:TEMP "bettbox_verify"
+              Expand-Archive -Path $zipFile.FullName -DestinationPath $extractDir -Force
+              $exePath = Get-ChildItem -Recurse -Filter "Bettbox.exe" $extractDir | Select-Object -First 1
+            }
+          }
+          if (-not $exePath) { throw "Bettbox.exe not found in dist" }
+          Write-Host "Checking PE machine type of: $($exePath.FullName)"
+          $bytes = [System.IO.File]::ReadAllBytes($exePath.FullName)
+          $lfaNew = [BitConverter]::ToInt32($bytes, 0x3C)
+          $machine = [BitConverter]::ToUInt16($bytes, $lfaNew + 4)
+          $machineHex = "0x{0:X4}" -f $machine
+          Write-Host "PE Machine type: $machineHex"
+          # 0xAA64 = IMAGE_FILE_MACHINE_ARM64
+          if ($machine -ne 0xAA64) {
+            throw "Expected ARM64 (0xAA64) but got $machineHex. The artifact is not a native ARM64 binary."
+          }
+          Write-Host "✓ ARM64 PE machine type (0xAA64) verified"
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
