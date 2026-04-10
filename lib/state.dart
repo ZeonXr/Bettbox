@@ -17,7 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as flutter_riverpod;
-import 'package:material_color_utilities/palettes/core_palette.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -42,7 +41,8 @@ class GlobalState {
   late Measure measure;
   late CommonTheme theme;
   late Color accentColor;
-  CorePalette? corePalette;
+  ColorScheme? lightDynamicColorScheme;
+  ColorScheme? darkDynamicColorScheme;
   DateTime? startTime;
   UpdateTasks tasks = [];
   final navigatorKey = GlobalKey<NavigatorState>();
@@ -93,7 +93,11 @@ class GlobalState {
 
   Future<void> _initDynamicColor() async {
     try {
-      corePalette = await DynamicColorPlugin.getCorePalette();
+      final palette = await DynamicColorPlugin.getCorePalette();
+      if (palette != null) {
+        lightDynamicColorScheme = palette.toColorScheme(brightness: Brightness.light);
+        darkDynamicColorScheme = palette.toColorScheme(brightness: Brightness.dark);
+      }
       accentColor =
           await DynamicColorPlugin.getAccentColor() ??
           Color(defaultPrimaryColor);
