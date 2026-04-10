@@ -116,10 +116,10 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && 'master' || 'stable' }}
+          channel: 'stable'
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version-file: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && '' || 'pubspec.yaml' }}
+          flutter-version-file: 'pubspec.yaml'
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
