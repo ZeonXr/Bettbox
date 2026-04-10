@@ -248,17 +248,37 @@ class Build {
     return corePaths;
   }
 
-  static Future<void> buildHelper(Target target, String token) async {
+  static Future<void> buildHelper(
+    Target target,
+    String token, {
+    Arch? arch,
+  }) async {
+    const rustTargetMap = {
+      Arch.arm64: 'aarch64-pc-windows-msvc',
+      Arch.amd64: 'x86_64-pc-windows-msvc',
+    };
+    final rustTarget = rustTargetMap[arch];
+    final cargoArgs = [
+      'cargo',
+      'build',
+      '--release',
+      '--features',
+      'windows-service',
+      if (rustTarget != null) ...['--target', rustTarget],
+    ];
     await exec(
-      ['cargo', 'build', '--release', '--features', 'windows-service'],
+      cargoArgs,
       environment: {'TOKEN': token},
       name: 'build helper',
       workingDirectory: _servicesDir,
     );
+    final targetSubdir = rustTarget != null
+        ? join(rustTarget, 'release')
+        : 'release';
     final outPath = join(
       _servicesDir,
       'target',
-      'release',
+      targetSubdir,
       'helper${target.executableExtensionName}',
     );
     final targetPath = join(
@@ -493,14 +513,21 @@ class BuildCommand extends Command {
 
     switch (target) {
       case Target.windows:
-        final token = target != Target.android
-            ? await Build.calcSha256(corePaths.first)
-            : null;
-        Build.buildHelper(target, token!);
+        final targetMap = {
+          Arch.arm64: 'windows-arm64',
+          Arch.amd64: 'windows-x64',
+        };
+        final defaultTarget = targetMap[arch];
+        if (defaultTarget == null) {
+          throw 'Unsupported Windows arch: $arch';
+        }
+        final token = await Build.calcSha256(corePaths.first);
+        Build.buildHelper(target, token, arch: arch);
         _buildDistributor(
           target: target,
           targets: 'exe',
-          args: ' --description $desc --build-dart-define=CORE_SHA256=$token',
+          args:
+              ' --description $desc --build-target-platform $defaultTarget --build-dart-define=CORE_SHA256=$token',
           env: env,
         );
         return;
