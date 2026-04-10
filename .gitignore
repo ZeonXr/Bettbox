@@ -63,3 +63,18 @@ app.*.map.json
 # FVM Version Cache
 .fvm/
 .fvmrc
+macos/Podfile.lock
+macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+macos/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved
+plugins/flutter_distributor/packages/flutter_distributor/devtools_options.yaml
+macos/Podfile.lock
+
+ios/Podfile
+pubspec.lock
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.h
+ios/Runner/GeneratedPluginRegistrant.m
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/flutter_lldb_helper.py
+ios/Flutter/ephemeral/flutter_lldbinit
+macos/Podfile.lock
