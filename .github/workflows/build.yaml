@@ -113,13 +113,22 @@ jobs:
           go-version: ${{ matrix.compatible == true && '1.20.x' || '1.24.x' }}
           cache-dependency-path: core/go.sum
 
-      - name: Setup Flutter
+      - name: Setup Flutter Master
+        if: matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm'
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: master
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version-file: 'pubspec.yaml'
+      
+      - name: Setup Flutter Stable
+        if: matrix.os != 'ubuntu-24.04-arm' && matrix.os != 'windows-11-arm'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
+          flutter-version: 3.35.7
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
