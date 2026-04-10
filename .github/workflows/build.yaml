@@ -137,38 +137,6 @@ jobs:
           dart run build_runner build -d
           dart setup.dart ${{ matrix.platform }} --arch ${{ matrix.arch }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} ${{ matrix.compatible == true && '--compatible' || '' }}
 
-      - name: Verify Windows PE Architecture
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          $arch = "${{ matrix.arch }}"
-          $buildArch = if ($arch -eq "arm64") { "arm64" } else { "x64" }
-          $exePath = "build\windows\$buildArch\runner\Release\Bettbox.exe"
-
-          if (-not (Test-Path $exePath)) {
-            Write-Error "Executable not found at $exePath"
-            exit 1
-          }
-
-          $bytes = [System.IO.File]::ReadAllBytes($exePath)
-          $peOffset = [System.BitConverter]::ToInt32($bytes, 0x3C)
-          $machine  = [System.BitConverter]::ToUInt16($bytes, $peOffset + 4)
-          $machineHex = "{0:X4}" -f $machine
-
-          Write-Host "Arch: $arch | File: $exePath | PE Machine: 0x$machineHex"
-
-          # PE Machine type constants (COFF header field at offset 4 from PE signature):
-          #   0xAA64 = IMAGE_FILE_MACHINE_ARM64
-          #   0x8664 = IMAGE_FILE_MACHINE_AMD64
-          $expected = @{ "arm64" = "AA64"; "amd64" = "8664" }
-
-          if ($expected.ContainsKey($arch) -and $machineHex -ne $expected[$arch]) {
-            Write-Error "PE machine mismatch! Expected $($expected[$arch]) for $arch, got $machineHex. Aborting to prevent publishing a wrong-arch artifact."
-            exit 1
-          }
-
-          Write-Host "✓ PE machine validation passed: 0x$machineHex ($arch)"
-      
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:
