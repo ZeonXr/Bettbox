@@ -36,7 +36,7 @@ jobs:
             os: windows-2025
             arch: amd64
           - platform: windows
-            os: windows-2025
+            os: windows-11-arm
             arch: arm64
           - platform: macos
             os: macos-15
@@ -70,11 +70,22 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: Setup Rust (Windows ARM64 native runner)
+        if: matrix.os == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          # Download the official ARM64 Rust installer from rustup.rs over HTTPS.
+          # win.rustup.rs serves the canonical rustup-init.exe signed by the Rust project.
+          Invoke-WebRequest -Uri "https://win.rustup.rs/aarch64" -OutFile rustup-init.exe
+          .\rustup-init.exe -y --default-toolchain stable
+          $cargoPath = "$env:USERPROFILE\.cargo\bin"
+          Add-Content $env:GITHUB_PATH $cargoPath
+
       - name: Setup Rust
-        if: matrix.platform == 'windows'
+        if: matrix.platform == 'windows' && matrix.os != 'windows-11-arm'
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.arch == 'arm64' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}
+          targets: x86_64-pc-windows-msvc
 
       - name: Setup Keystore
         if: matrix.platform == 'android'
@@ -107,10 +118,10 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ matrix.os == 'ubuntu-24.04-arm' && 'master' || 'stable' }}
+          channel: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && 'master' || 'stable' }}
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version: ${{ matrix.os == 'ubuntu-24.04-arm' && '' || '3.35.7' }}
+          flutter-version: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && '' || '3.35.7' }}
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
@@ -125,7 +136,7 @@ jobs:
           flutter pub get
           dart run build_runner build -d
           dart setup.dart ${{ matrix.platform }} --arch ${{ matrix.arch }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} ${{ matrix.compatible == true && '--compatible' || '' }}
-      
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:
