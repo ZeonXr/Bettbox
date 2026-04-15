@@ -498,6 +498,9 @@ class BuildCommand extends Command {
           Arch.amd64: 'windows-x64',
         };
         final defaultTarget = targetMap[arch];
+        if (defaultTarget == null) {
+          throw 'Unsupported windows arch: $arch';
+        }
         final token = target != Target.android
             ? await Build.calcSha256(corePaths.first)
             : null;

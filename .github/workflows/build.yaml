@@ -188,13 +188,25 @@ jobs:
               default { return ('0x{0:X4}' -f $machine) }
             }
           }
-          $expectedArch = if ('${{ matrix.arch }}' -eq 'arm64') { 'ARM64' } else { 'AMD64' }
-          $expectedPath = if ('${{ matrix.arch }}' -eq 'arm64') { '\build\windows\arm64\' } else { '\build\windows\x64\' }
           $runnerExes = Get-ChildItem -Path "$env:GITHUB_WORKSPACE\build\windows" -Filter *.exe -Recurse | Where-Object {
             $_.FullName -match '[\\/]runner[\\/]Release[\\/]'
           }
           if (-not $runnerExes) {
             throw 'No Windows runner release executable found to validate'
+          }
+          $matrixArch = '${{ matrix.arch }}'
+          switch ($matrixArch) {
+            'arm64' {
+              $expectedArch = 'ARM64'
+              $expectedPath = '\build\windows\arm64\'
+            }
+            'amd64' {
+              $expectedArch = 'AMD64'
+              $expectedPath = '\build\windows\x64\'
+            }
+            default {
+              throw "Unsupported Windows architecture for validation: $matrixArch"
+            }
           }
           if (-not ($runnerExes | Where-Object { $_.FullName.ToLower().Contains($expectedPath.ToLower()) })) {
             throw "Expected output path segment '$expectedPath' not found in runner release output"
