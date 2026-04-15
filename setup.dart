@@ -493,14 +493,6 @@ class BuildCommand extends Command {
 
     switch (target) {
       case Target.windows:
-        final targetMap = {
-          Arch.arm64: 'windows-arm64',
-          Arch.amd64: 'windows-x64',
-        };
-        final defaultTarget = targetMap[arch];
-        if (defaultTarget == null) {
-          throw 'Unsupported windows arch: $arch';
-        }
         final token = target != Target.android
             ? await Build.calcSha256(corePaths.first)
             : null;
@@ -508,8 +500,7 @@ class BuildCommand extends Command {
         _buildDistributor(
           target: target,
           targets: 'exe',
-          args:
-              ' --description $desc --build-target-platform $defaultTarget --build-dart-define=CORE_SHA256=$token',
+          args: ' --description $desc --build-dart-define=CORE_SHA256=$token',
           env: env,
         );
         return;
