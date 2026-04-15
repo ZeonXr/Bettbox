@@ -36,7 +36,7 @@ jobs:
             os: windows-2022
             arch: amd64
           - platform: windows
-            os: windows-2022
+            os: windows-11-arm
             arch: arm64
           - platform: macos
             os: macos-15
@@ -107,10 +107,40 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ matrix.os == 'ubuntu-24.04-arm' && 'master' || 'stable' }}
+          channel: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && 'master' || 'stable' }}
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version: ${{ matrix.os == 'ubuntu-24.04-arm' && '' || '3.35.7' }}
+          flutter-version: ${{ (matrix.os == 'ubuntu-24.04-arm' || matrix.os == 'windows-11-arm') && '' || '3.35.7' }}
+
+      - name: Setup llvm-mingw (windows arm64)
+        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = 'C:\clangarm64'
+          $archive = Join-Path $env:RUNNER_TEMP 'llvm-mingw-ucrt-aarch64.zip'
+          $extractDir = Join-Path $env:RUNNER_TEMP 'llvm-mingw-ucrt-aarch64'
+          $release = Invoke-RestMethod 'https://api.github.com/repos/mstorsjo/llvm-mingw/releases/latest'
+          $asset = $release.assets | Where-Object { $_.name -like '*-ucrt-aarch64.zip' } | Select-Object -First 1
+          if (-not $asset) {
+            throw 'Could not find llvm-mingw ucrt aarch64 asset in latest release'
+          }
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $extractDir -Force
+          $toolchainDir = Get-ChildItem $extractDir -Directory | Select-Object -First 1
+          if (-not $toolchainDir) {
+            throw 'llvm-mingw extraction failed'
+          }
+          if (Test-Path $root) {
+            Remove-Item $root -Recurse -Force
+          }
+          Move-Item $toolchainDir.FullName $root
+          "CC=$root\bin\clang.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CXX=$root\bin\clang++.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CLANGARM64_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CLANGARM64_BIN=$root\bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CGO_ENABLED=1" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "$root\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
@@ -125,6 +155,61 @@ jobs:
           flutter pub get
           dart run build_runner build -d
           dart setup.dart ${{ matrix.platform }} --arch ${{ matrix.arch }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} ${{ matrix.compatible == true && '--compatible' || '' }}
+
+      - name: Copy ARM64 runtime DLLs
+        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:CLANGARM64_ROOT) {
+            throw 'CLANGARM64_ROOT is not set'
+          }
+          $dllPath = Join-Path $env:CLANGARM64_ROOT 'bin\libc++.dll'
+          if (-not (Test-Path $dllPath)) {
+            Write-Warning "Optional runtime DLL not found: $dllPath"
+            exit 0
+          }
+          Get-ChildItem -Path "$env:GITHUB_WORKSPACE\dist" -Filter *.exe -Recurse | ForEach-Object {
+            Copy-Item $dllPath -Destination $_.DirectoryName -Force
+          }
+
+      - name: Verify Windows binary architecture
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Get-PeMachine([string]$path) {
+            $bytes = [System.IO.File]::ReadAllBytes($path)
+            $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+            $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+            switch ($machine) {
+              0x8664 { return 'AMD64' }
+              0xAA64 { return 'ARM64' }
+              default { return ('0x{0:X4}' -f $machine) }
+            }
+          }
+          $expectedArch = if ('${{ matrix.arch }}' -eq 'arm64') { 'ARM64' } else { 'AMD64' }
+          $expectedPath = if ('${{ matrix.arch }}' -eq 'arm64') { '\build\windows\arm64\' } else { '\build\windows\x64\' }
+          $runnerExes = Get-ChildItem -Path "$env:GITHUB_WORKSPACE\build\windows" -Filter *.exe -Recurse | Where-Object {
+            $_.FullName -match '[\\/]runner[\\/]Release[\\/]'
+          }
+          if (-not $runnerExes) {
+            throw 'No Windows runner release executable found to validate'
+          }
+          if (-not ($runnerExes | Where-Object { $_.FullName.ToLower().Contains($expectedPath.ToLower()) })) {
+            throw "Expected output path segment '$expectedPath' not found in runner release output"
+          }
+          $mismatch = @()
+          foreach ($exe in $runnerExes) {
+            $actualArch = Get-PeMachine $exe.FullName
+            Write-Host "Checked $($exe.FullName): $actualArch"
+            if ($actualArch -ne $expectedArch) {
+              $mismatch += "$($exe.FullName) => $actualArch (expected $expectedArch)"
+            }
+          }
+          if ($mismatch.Count -gt 0) {
+            throw ("Architecture validation failed:`n" + ($mismatch -join "`n"))
+          }
       
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
