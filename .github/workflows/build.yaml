@@ -42,10 +42,10 @@ jobs:
             flutter_version: "7e1c8868"
             llvm_ver: "20251202"
           - platform: macos
-            os: macos-15
+            os: macos-26
             arch: arm64
           - platform: macos
-            os: macos-15
+            os: macos-26
             arch: amd64
           - platform: linux
             os: ubuntu-22.04
@@ -64,7 +64,7 @@ jobs:
             arch: amd64
             compatible: true
           - platform: macos
-            os: macos-15
+            os: macos-26
             arch: amd64
             compatible: true
 
