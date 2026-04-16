@@ -328,13 +328,15 @@ class _WindowHeaderState extends State<WindowHeader> {
 }
 
 final sidebarIconPathProvider =
-    StateNotifierProvider<SidebarIconPathNotifier, String?>((ref) {
-      return SidebarIconPathNotifier();
-    });
+    NotifierProvider<SidebarIconPathNotifier, String?>(
+      SidebarIconPathNotifier.new,
+    );
 
-class SidebarIconPathNotifier extends StateNotifier<String?> {
-  SidebarIconPathNotifier() : super(null) {
+class SidebarIconPathNotifier extends Notifier<String?> {
+  @override
+  String? build() {
     _init();
+    return null;
   }
 
   Future<void> _init() async {
@@ -357,7 +359,7 @@ class AppIcon extends ConsumerWidget {
   const AppIcon({super.key});
 
   Future<void> _handlePickImage(BuildContext context, WidgetRef ref) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final result = await FilePicker.pickFiles(type: FileType.image);
 
     if (result != null && result.files.single.path != null) {
       final path = result.files.single.path!;

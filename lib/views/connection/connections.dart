@@ -122,7 +122,7 @@ class _ConnectionsViewState extends ConsumerState<ConnectionsView>
       _timer = null;
       return;
     }
-    ref.read(connectionsProvider.notifier).state = connections;
+    ref.read(connectionsProvider.notifier).set(connections);
   }
 
   void _handleBackgroundModeChanged() {
@@ -155,11 +155,11 @@ class _ConnectionsViewState extends ConsumerState<ConnectionsView>
   }
 
   void _onSearch(String value) {
-    ref.read(connectionsSearchProvider.notifier).state = value;
+    ref.read(connectionsSearchProvider.notifier).set(value);
   }
 
   void _onKeywordsUpdate(List<String> keywords) {
-    ref.read(connectionsKeywordsProvider.notifier).state = keywords;
+    ref.read(connectionsKeywordsProvider.notifier).set(keywords);
   }
 
   @override

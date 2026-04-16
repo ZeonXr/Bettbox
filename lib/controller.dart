@@ -254,13 +254,13 @@ class AppController {
   }
 
   Future<void> updateTraffic() async {
-    _ref.read(totalTrafficProvider.notifier).value = await clashCore
-        .getTotalTraffic();
+    final traffic = await clashCore.getTotalTraffic();
+    _ref.read(totalTrafficProvider.notifier).value = traffic;
     if (!await _shouldUpdateDashboardTick()) {
       return;
     }
-    final traffic = await clashCore.getTraffic();
-    _ref.read(trafficsProvider.notifier).addTraffic(traffic);
+    final t = await clashCore.getTraffic();
+    _ref.read(trafficsProvider.notifier).addTraffic(t);
   }
 
   Future<void> addProfile(Profile profile) async {
@@ -286,14 +286,15 @@ class AppController {
   }
 
   Future<void> updateProviders() async {
-    _ref.read(providersProvider.notifier).value = await clashCore
-        .getExternalProviders();
+    final providers = await clashCore.getExternalProviders();
+    _ref.read(providersProvider.notifier).value = providers;
   }
 
   Future<void> updateLocalIp() async {
     _ref.read(localIpProvider.notifier).value = null;
     await Future.delayed(commonDuration);
-    _ref.read(localIpProvider.notifier).value = await utils.getLocalIpAddress();
+    final ip = await utils.getLocalIpAddress();
+    _ref.read(localIpProvider.notifier).value = ip;
   }
 
   Future<void> updateProfile(Profile profile) async {
@@ -774,7 +775,7 @@ class AppController {
 
     try {
       final wakelockEnabled = await WakelockPlus.enabled;
-      _ref.read(wakelockStateProvider.notifier).state = wakelockEnabled;
+      _ref.read(wakelockStateProvider.notifier).set(wakelockEnabled);
 
       if (wakelockEnabled) {
         startWakelockAutoRecovery();

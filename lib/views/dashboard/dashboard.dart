@@ -11,13 +11,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final customDashboardTitleProvider =
-    StateNotifierProvider<CustomDashboardTitleNotifier, String?>((ref) {
-      return CustomDashboardTitleNotifier();
-    });
+    NotifierProvider<CustomDashboardTitleNotifier, String?>(
+      CustomDashboardTitleNotifier.new,
+    );
 
-class CustomDashboardTitleNotifier extends StateNotifier<String?> {
-  CustomDashboardTitleNotifier() : super(null) {
+class CustomDashboardTitleNotifier extends Notifier<String?> {
+  @override
+  String? build() {
     _init();
+    return null;
   }
 
   Future<void> _init() async {

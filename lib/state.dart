@@ -287,8 +287,7 @@ class GlobalState {
         );
         providerContainer
                 .read(providers_state.wakelockStateProvider.notifier)
-                .state =
-            enabled;
+                .set(enabled);
       }
     }
   }

@@ -148,7 +148,11 @@ ProxyState proxyState(Ref ref) {
 }
 
 // 添加一个同步的 wakelock 状态 Provider
-final wakelockStateProvider = StateProvider<bool>((ref) => false);
+final wakelockStateProvider = NotifierProvider<WakelockNotifier, bool>(WakelockNotifier.new);
+class WakelockNotifier extends Notifier<bool> {
+  @override bool build() => false;
+  void set(bool value) => state = value;
+}
 
 @riverpod
 Future<TrayState> trayState(Ref ref) async {

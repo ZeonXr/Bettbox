@@ -35,11 +35,11 @@ class _LogsViewState extends ConsumerState<LogsView> {
   }
 
   void _onSearch(String value) {
-    ref.read(logsSearchProvider.notifier).state = value;
+    ref.read(logsSearchProvider.notifier).set(value);
   }
 
   void _onKeywordsUpdate(List<String> keywords) {
-    ref.read(logsKeywordsProvider.notifier).state = keywords;
+    ref.read(logsKeywordsProvider.notifier).set(keywords);
   }
 
   void _toggleAutoScroll() {

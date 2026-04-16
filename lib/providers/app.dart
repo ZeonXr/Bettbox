@@ -43,8 +43,17 @@ class Logs extends _$Logs with AutoDisposeNotifierMixin {
 }
 
 // Search and filter providers for logs
-final logsSearchProvider = StateProvider<String>((ref) => '');
-final logsKeywordsProvider = StateProvider<List<String>>((ref) => []);
+final logsSearchProvider = NotifierProvider<LogsSearchNotifier, String>(LogsSearchNotifier.new);
+class LogsSearchNotifier extends Notifier<String> {
+  @override String build() => '';
+  void set(String value) => state = value;
+}
+
+final logsKeywordsProvider = NotifierProvider<LogsKeywordsNotifier, List<String>>(LogsKeywordsNotifier.new);
+class LogsKeywordsNotifier extends Notifier<List<String>> {
+  @override List<String> build() => [];
+  void set(List<String> value) => state = value;
+}
 
 final filteredLogsProvider = Provider<List<Log>>((ref) {
   final logs = ref.watch(logsProvider.select((s) => s.list));
@@ -89,8 +98,17 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
 }
 
 // Search and filter providers for requests
-final requestsSearchProvider = StateProvider<String>((ref) => '');
-final requestsKeywordsProvider = StateProvider<List<String>>((ref) => []);
+final requestsSearchProvider = NotifierProvider<RequestsSearchNotifier, String>(RequestsSearchNotifier.new);
+class RequestsSearchNotifier extends Notifier<String> {
+  @override String build() => '';
+  void set(String value) => state = value;
+}
+
+final requestsKeywordsProvider = NotifierProvider<RequestsKeywordsNotifier, List<String>>(RequestsKeywordsNotifier.new);
+class RequestsKeywordsNotifier extends Notifier<List<String>> {
+  @override List<String> build() => [];
+  void set(List<String> value) => state = value;
+}
 
 final filteredRequestsProvider = Provider<List<TrackerInfo>>((ref) {
   final requests = ref.watch(requestsProvider.select((s) => s.list));
@@ -449,9 +467,23 @@ class IsSmartStopped extends _$IsSmartStopped {
 }
 
 // Connections providers
-final connectionsProvider = StateProvider<List<TrackerInfo>>((ref) => []);
-final connectionsSearchProvider = StateProvider<String>((ref) => '');
-final connectionsKeywordsProvider = StateProvider<List<String>>((ref) => []);
+final connectionsProvider = NotifierProvider<ConnectionsNotifier, List<TrackerInfo>>(ConnectionsNotifier.new);
+class ConnectionsNotifier extends Notifier<List<TrackerInfo>> {
+  @override List<TrackerInfo> build() => [];
+  void set(List<TrackerInfo> value) => state = value;
+}
+
+final connectionsSearchProvider = NotifierProvider<ConnectionsSearchNotifier, String>(ConnectionsSearchNotifier.new);
+class ConnectionsSearchNotifier extends Notifier<String> {
+  @override String build() => '';
+  void set(String value) => state = value;
+}
+
+final connectionsKeywordsProvider = NotifierProvider<ConnectionsKeywordsNotifier, List<String>>(ConnectionsKeywordsNotifier.new);
+class ConnectionsKeywordsNotifier extends Notifier<List<String>> {
+  @override List<String> build() => [];
+  void set(List<String> value) => state = value;
+}
 
 final filteredConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
   final connections = ref.watch(connectionsProvider);

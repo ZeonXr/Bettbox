@@ -13,7 +13,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Force refresh icon flag
-final forceRefreshIconProvider = StateProvider<bool>((ref) => false);
+final forceRefreshIconProvider = NotifierProvider<ForceRefreshIconNotifier, bool>(ForceRefreshIconNotifier.new);
+class ForceRefreshIconNotifier extends Notifier<bool> {
+  @override bool build() => false;
+  void set(bool value) => state = value;
+}
 
 class AccessView extends ConsumerStatefulWidget {
   const AccessView({super.key});
@@ -285,14 +289,14 @@ class _AccessViewState extends ConsumerState<AccessView>
         await globalState.appController.safeRun(() async {
           // Clear cache, force reload
           // Mark as force refresh mode
-          ref.read(forceRefreshIconProvider.notifier).state = true;
+          ref.read(forceRefreshIconProvider.notifier).set(true);
           await _checkPermissionAndLoadPackages(
             interactive: true,
             forceReload: true,
           );
           // Reset force refresh flag
           if (mounted) {
-            ref.read(forceRefreshIconProvider.notifier).state = false;
+            ref.read(forceRefreshIconProvider.notifier).set(false);
           }
         }, needLoading: true);
 

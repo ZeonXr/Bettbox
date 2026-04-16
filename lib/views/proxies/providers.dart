@@ -26,19 +26,18 @@ class ProvidersView extends ConsumerStatefulWidget {
 class _ProvidersViewState extends ConsumerState<ProvidersView> {
   Future<void> _updateProviders() async {
     final providers = ref.read(providersProvider);
-    final providersNotifier = ref.read(providersProvider.notifier);
     final messages = [];
     final updateProviders = providers.map<Future>((provider) async {
-      providersNotifier.setProvider(provider.copyWith(isUpdating: true));
+      ref.read(providersProvider.notifier).setProvider(provider.copyWith(isUpdating: true));
       final message = await clashCore.updateExternalProvider(
         providerName: provider.name,
       );
       if (message.isNotEmpty) {
         messages.add('${provider.name}: $message \n');
       }
-      providersNotifier.setProvider(
-        await clashCore.getExternalProvider(provider.name),
-      );
+      final externalProvider = await clashCore.getExternalProvider(provider.name);
+      if (!mounted) return;
+      ref.read(providersProvider.notifier).setProvider(externalProvider);
     });
     final titleMedium = context.textTheme.titleMedium;
     await Future.wait(updateProviders);

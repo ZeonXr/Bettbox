@@ -85,7 +85,7 @@ Future<void> _initSentryAndRun(Future<void> Function() runner) async {
 
 Future<void> main() async {
   globalState.isService = false;
-  WidgetsFlutterBinding.ensureInitialized();
+  SentryWidgetsFlutterBinding.ensureInitialized();
 
   PaintingBinding.instance.imageCache.maximumSizeBytes = 50 * 1024 * 1024;
 

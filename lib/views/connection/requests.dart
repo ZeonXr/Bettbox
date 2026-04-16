@@ -35,11 +35,11 @@ class _RequestsViewState extends ConsumerState<RequestsView> {
   }
 
   void _onSearch(String value) {
-    ref.read(requestsSearchProvider.notifier).state = value;
+    ref.read(requestsSearchProvider.notifier).set(value);
   }
 
   void _onKeywordsUpdate(List<String> keywords) {
-    ref.read(requestsKeywordsProvider.notifier).state = keywords;
+    ref.read(requestsKeywordsProvider.notifier).set(keywords);
   }
 
   void _toggleAutoScroll() {
