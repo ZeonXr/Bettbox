@@ -36,8 +36,11 @@ jobs:
             os: windows-2022
             arch: amd64
           - platform: windows
-            os: windows-2022
+            os: windows-11-arm
             arch: arm64
+            flutter_channel: master
+            flutter_version: "7e1c8868"
+            llvm_ver: "20251202"
           - platform: macos
             os: macos-15
             arch: arm64
@@ -104,13 +107,39 @@ jobs:
           go-version: ${{ matrix.compatible == true && '1.20.x' || '1.24.x' }}
           cache-dependency-path: core/go.sum
 
+      - name: Enable long paths (windows arm64)
+        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
+        run: git config --global core.longpaths true
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ matrix.os == 'ubuntu-24.04-arm' && 'master' || 'stable' }}
+          channel: ${{ matrix.flutter_channel || (matrix.os == 'ubuntu-24.04-arm' && 'master' || 'stable') }}
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version: ${{ matrix.os == 'ubuntu-24.04-arm' && '' || '3.35.7' }}
+          flutter-version: ${{ matrix.flutter_version || (matrix.os == 'ubuntu-24.04-arm' && '' || '3.35.7') }}
+
+      - name: Setup llvm-mingw (windows arm64)
+        if: matrix.platform == 'windows' && matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          $ver = "${{ matrix.llvm_ver }}"
+          $url = "https://github.com/mstorsjo/llvm-mingw/releases/download/$ver/llvm-mingw-$ver-ucrt-aarch64.zip"
+          $zip = "$env:RUNNER_TEMP\llvm.zip"
+          $extract = "$env:RUNNER_TEMP\extract"
+          $target = "C:\clangarm64"
+          curl -L $url -o $zip
+          rm -r -fo $extract,$target -ea Ignore
+          mkdir $extract | Out-Null
+          tar -xf $zip -C $extract
+          mv (Get-ChildItem $extract)[0].FullName $target
+          $b = "$target\bin"
+          "CC=$b\clang.exe"        >> $env:GITHUB_ENV
+          "CXX=$b\clang++.exe"     >> $env:GITHUB_ENV
+          "CLANGARM64_BIN=$b"       >> $env:GITHUB_ENV
+          "CGO_ENABLED=1"           >> $env:GITHUB_ENV
+          "CLANGARM64_ROOT=$target" >> $env:GITHUB_ENV
+          $b >> $env:GITHUB_PATH
 
       - name: Clean Gradle
         if: matrix.platform == 'android'
