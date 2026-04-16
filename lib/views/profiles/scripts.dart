@@ -65,6 +65,7 @@ class _ScriptsViewState extends ConsumerState<ScriptsView> {
         return CommonScrollBar(
           controller: null,
           child: ListView.builder(
+            primary: true,
             padding: kMaterialListPadding.copyWith(bottom: 16 + 64),
             itemCount: scripts.length,
             itemBuilder: (_, index) {

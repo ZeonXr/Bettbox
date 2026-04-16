@@ -66,6 +66,7 @@ class _ProxyGroupsList extends StatelessWidget {
       thumbVisibility: true,
       trackVisibility: true,
       child: CustomScrollView(
+        primary: true,
         cacheExtent: 500,
         slivers: [
           SliverPadding(

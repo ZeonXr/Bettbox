@@ -565,6 +565,7 @@ List<Widget> generateInfoSection({
 
 Widget generateListView(List<Widget> items) {
   return ListView.builder(
+    primary: true,
     itemCount: items.length,
     itemBuilder: (_, index) => items[index],
     padding: const EdgeInsets.only(bottom: 16),

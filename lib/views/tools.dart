@@ -124,6 +124,7 @@ class _ToolViewState extends ConsumerState<ToolsView> {
       body: CommonScrollBar(
         controller: null,
         child: ListView.builder(
+          primary: true,
           key: toolsStoreKey,
           itemCount: items.length,
           itemBuilder: (_, index) => items[index],
