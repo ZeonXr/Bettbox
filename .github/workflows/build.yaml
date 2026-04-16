@@ -114,10 +114,10 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ matrix.flutter_channel || (matrix.os == 'ubuntu-24.04-arm' && 'master' || 'stable') }}
+          channel: ${{ matrix.flutter_channel || 'stable' }}
           cache: true
           cache-key: flutter-${{ matrix.platform }}-${{ matrix.arch }}-${{ hashFiles('**/pubspec.lock') }}
-          flutter-version: ${{ matrix.flutter_version || (matrix.os == 'ubuntu-24.04-arm' && '' || '3.35.7') }}
+          flutter-version: ${{ matrix.flutter_version || '3.41.6' }}
 
       - name: Setup llvm-mingw (windows arm64)
         if: matrix.platform == 'windows' && matrix.arch == 'arm64'
