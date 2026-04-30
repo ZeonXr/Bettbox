@@ -347,7 +347,6 @@ enum PageLabel {
   profiles,
   tools,
   logs,
-  requests,
   resources,
   script,
   connections,

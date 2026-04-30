@@ -60,6 +60,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "action_start": MessageLookupByLibrary.simpleMessage("Start/Stop"),
     "action_tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "action_view": MessageLookupByLibrary.simpleMessage("Show/Hide"),
+    "active": MessageLookupByLibrary.simpleMessage("Active"),
     "add": MessageLookupByLibrary.simpleMessage("Add"),
     "addProfile": MessageLookupByLibrary.simpleMessage("Add Profile"),
     "addRule": MessageLookupByLibrary.simpleMessage("Add Rule"),
@@ -205,6 +206,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "clipboardImport": MessageLookupByLibrary.simpleMessage(
       "Import from Clipboard",
     ),
+    "closed": MessageLookupByLibrary.simpleMessage("Closed"),
+    "closedConnection": MessageLookupByLibrary.simpleMessage(
+      "Closed Connection",
+    ),
+    "closedConnections": MessageLookupByLibrary.simpleMessage(
+      "Closed Connections",
+    ),
     "color": MessageLookupByLibrary.simpleMessage("Color"),
     "colorSchemes": MessageLookupByLibrary.simpleMessage("Color Schemes"),
     "columns": MessageLookupByLibrary.simpleMessage("Columns"),
@@ -220,9 +228,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "confirm": MessageLookupByLibrary.simpleMessage("Confirm"),
     "connection": MessageLookupByLibrary.simpleMessage("Active Connections"),
+    "connectionSortDefault": MessageLookupByLibrary.simpleMessage(
+      "Default Order",
+    ),
+    "connectionSortDownloadSpeed": MessageLookupByLibrary.simpleMessage(
+      "Sort by Download Speed",
+    ),
+    "connectionSortUploadSpeed": MessageLookupByLibrary.simpleMessage(
+      "Sort by Upload Speed",
+    ),
     "connections": MessageLookupByLibrary.simpleMessage("Connections"),
     "connectionsDesc": MessageLookupByLibrary.simpleMessage(
-      "View active connections",
+      "View active and closed connections",
     ),
     "connectivity": MessageLookupByLibrary.simpleMessage("Connectivity:"),
     "contactMe": MessageLookupByLibrary.simpleMessage("Contact Me"),

@@ -1214,6 +1214,36 @@ class AppLocalizations {
     return Intl.message('Sort by Name', name: 'nameSort', desc: '', args: []);
   }
 
+  /// `Default Order`
+  String get connectionSortDefault {
+    return Intl.message(
+      'Default Order',
+      name: 'connectionSortDefault',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sort by Download Speed`
+  String get connectionSortDownloadSpeed {
+    return Intl.message(
+      'Sort by Download Speed',
+      name: 'connectionSortDownloadSpeed',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sort by Upload Speed`
+  String get connectionSortUploadSpeed {
+    return Intl.message(
+      'Sort by Upload Speed',
+      name: 'connectionSortUploadSpeed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Please upload a file`
   String get pleaseUploadFile {
     return Intl.message(
@@ -1894,6 +1924,16 @@ class AppLocalizations {
     );
   }
 
+  /// `Active`
+  String get active {
+    return Intl.message('Active', name: 'active', desc: '', args: []);
+  }
+
+  /// `Closed`
+  String get closed {
+    return Intl.message('Closed', name: 'closed', desc: '', args: []);
+  }
+
   /// `Find Process`
   String get findProcessMode {
     return Intl.message(
@@ -1934,10 +1974,10 @@ class AppLocalizations {
     return Intl.message('Connections', name: 'connections', desc: '', args: []);
   }
 
-  /// `View active connections`
+  /// `View active and closed connections`
   String get connectionsDesc {
     return Intl.message(
-      'View active connections',
+      'View active and closed connections',
       name: 'connectionsDesc',
       desc: '',
       args: [],
@@ -4854,6 +4894,26 @@ class AppLocalizations {
     return Intl.message(
       'Active Connections',
       name: 'connection',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Closed Connection`
+  String get closedConnection {
+    return Intl.message(
+      'Closed Connection',
+      name: 'closedConnection',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Closed Connections`
+  String get closedConnections {
+    return Intl.message(
+      'Closed Connections',
+      name: 'closedConnections',
       desc: '',
       args: [],
     );

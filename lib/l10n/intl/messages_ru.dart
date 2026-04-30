@@ -60,6 +60,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "action_start": MessageLookupByLibrary.simpleMessage("Запуск/Остановка"),
     "action_tun": MessageLookupByLibrary.simpleMessage("Виртуальный адаптер"),
     "action_view": MessageLookupByLibrary.simpleMessage("Показать/Скрыть"),
+    "active": MessageLookupByLibrary.simpleMessage("Активные"),
     "add": MessageLookupByLibrary.simpleMessage("Добавить"),
     "addProfile": MessageLookupByLibrary.simpleMessage("Добавить конфигурацию"),
     "addRule": MessageLookupByLibrary.simpleMessage("Добавить правило"),
@@ -205,6 +206,13 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "clipboardExport": MessageLookupByLibrary.simpleMessage("Экспорт в буфер"),
     "clipboardImport": MessageLookupByLibrary.simpleMessage("Импорт из буфера"),
+    "closed": MessageLookupByLibrary.simpleMessage("Закрытые"),
+    "closedConnection": MessageLookupByLibrary.simpleMessage(
+      "Закрытое соединение",
+    ),
+    "closedConnections": MessageLookupByLibrary.simpleMessage(
+      "Закрытые соединения",
+    ),
     "color": MessageLookupByLibrary.simpleMessage("Цвет"),
     "colorSchemes": MessageLookupByLibrary.simpleMessage("Цветовые схемы"),
     "columns": MessageLookupByLibrary.simpleMessage("Колонки"),
@@ -220,9 +228,18 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "confirm": MessageLookupByLibrary.simpleMessage("Подтвердить"),
     "connection": MessageLookupByLibrary.simpleMessage("Активные соединения"),
+    "connectionSortDefault": MessageLookupByLibrary.simpleMessage(
+      "Исходный порядок",
+    ),
+    "connectionSortDownloadSpeed": MessageLookupByLibrary.simpleMessage(
+      "По скорости загрузки",
+    ),
+    "connectionSortUploadSpeed": MessageLookupByLibrary.simpleMessage(
+      "По скорости отправки",
+    ),
     "connections": MessageLookupByLibrary.simpleMessage("Соединения"),
     "connectionsDesc": MessageLookupByLibrary.simpleMessage(
-      "Просмотр текущих соединений",
+      "Просмотр активных и закрытых соединений",
     ),
     "connectivity": MessageLookupByLibrary.simpleMessage("Подключение:"),
     "contactMe": MessageLookupByLibrary.simpleMessage("Связаться со мной"),

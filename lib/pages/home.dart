@@ -53,7 +53,9 @@ class _HomePageState extends State<HomePage> {
                     navigationItems: navigationItems,
                     selectedIndex: currentIndex,
                     onTabChange: (index) {
-                      globalState.appController.toPage(navigationItems[index].label);
+                      globalState.appController.toPage(
+                        navigationItems[index].label,
+                      );
                     },
                   );
             if (isMobile) {
@@ -162,7 +164,10 @@ class _HomePageState extends State<HomePage> {
                           }
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? context.colorScheme.secondaryContainer
@@ -224,8 +229,6 @@ class _HomePageState extends State<HomePage> {
         return appLocalizations.tools;
       case PageLabel.logs:
         return appLocalizations.logs;
-      case PageLabel.requests:
-        return appLocalizations.requests;
       case PageLabel.resources:
         return appLocalizations.resources;
       case PageLabel.script:
@@ -276,9 +279,10 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   }
 
   int get _pageIndex {
-    return widget.navigationItems.indexWhere(
+    final index = widget.navigationItems.indexWhere(
       (item) => item.label == globalState.appState.pageLabel,
     );
+    return index == -1 ? 0 : index;
   }
 
   Future<void> _toPage(

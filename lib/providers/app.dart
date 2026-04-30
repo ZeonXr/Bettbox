@@ -53,14 +53,18 @@ final filteredLogsProvider = Provider<List<Log>>((ref) {
 
   return logs.where((item) {
     if (query.isNotEmpty) {
-      final matchesQuery = item.payload.toLowerCase().contains(query) ||
+      final matchesQuery =
+          item.payload.toLowerCase().contains(query) ||
           item.logLevel.name.toLowerCase().contains(query) ||
           item.dateTime.toLowerCase().contains(query);
       if (!matchesQuery) return false;
     }
     if (keywords.isNotEmpty) {
-      final itemStr = '${item.payload} ${item.logLevel.name} ${item.dateTime}'.toLowerCase();
-      final matchesKeywords = keywords.every((keyword) => itemStr.contains(keyword.toLowerCase()));
+      final itemStr = '${item.payload} ${item.logLevel.name} ${item.dateTime}'
+          .toLowerCase();
+      final matchesKeywords = keywords.every(
+        (keyword) => itemStr.contains(keyword.toLowerCase()),
+      );
       if (!matchesKeywords) return false;
     }
     return true;
@@ -88,23 +92,20 @@ class Requests extends _$Requests with AutoDisposeNotifierMixin {
   }
 }
 
-// Search and filter providers for requests
-final requestsSearchProvider = StateProvider<String>((ref) => '');
-final requestsKeywordsProvider = StateProvider<List<String>>((ref) => []);
-
-final filteredRequestsProvider = Provider<List<TrackerInfo>>((ref) {
-  final requests = ref.watch(requestsProvider.select((s) => s.list));
-  final query = ref.watch(requestsSearchProvider).toLowerCase().trim();
-  final keywords = ref.watch(requestsKeywordsProvider);
-
-  return requests.where((item) {
+List<TrackerInfo> _filterTrackerInfos(
+  List<TrackerInfo> items,
+  String query,
+  List<String> keywords,
+) {
+  return items.where((item) {
     if (query.isNotEmpty) {
       final networkText = item.metadata.network.toLowerCase();
       final hostText = item.metadata.host.toLowerCase();
       final destinationIPText = item.metadata.destinationIP.toLowerCase();
       final processText = item.metadata.process.toLowerCase();
       final chainsText = item.chains.join('').toLowerCase();
-      final matchesQuery = networkText.contains(query) ||
+      final matchesQuery =
+          networkText.contains(query) ||
           hostText.contains(query) ||
           destinationIPText.contains(query) ||
           processText.contains(query) ||
@@ -119,7 +120,7 @@ final filteredRequestsProvider = Provider<List<TrackerInfo>>((ref) {
     }
     return true;
   }).toList();
-});
+}
 
 @riverpod
 class Providers extends _$Providers with AutoDisposeNotifierMixin {
@@ -449,35 +450,51 @@ class IsSmartStopped extends _$IsSmartStopped {
 }
 
 // Connections providers
+enum ConnectionsSortType { none, downloadSpeed, uploadSpeed }
+
 final connectionsProvider = StateProvider<List<TrackerInfo>>((ref) => []);
 final connectionsSearchProvider = StateProvider<String>((ref) => '');
 final connectionsKeywordsProvider = StateProvider<List<String>>((ref) => []);
+final connectionsSortTypeProvider = StateProvider<ConnectionsSortType>(
+  (ref) => ConnectionsSortType.none,
+);
+
+List<TrackerInfo> _sortTrackerInfos(
+  List<TrackerInfo> items,
+  ConnectionsSortType sortType,
+) {
+  return switch (sortType) {
+    ConnectionsSortType.none => items,
+    ConnectionsSortType.downloadSpeed =>
+      items.toList()..sort(
+        (a, b) => (b.downloadSpeed ?? 0).compareTo(a.downloadSpeed ?? 0),
+      ),
+    ConnectionsSortType.uploadSpeed =>
+      items.toList()
+        ..sort((a, b) => (b.uploadSpeed ?? 0).compareTo(a.uploadSpeed ?? 0)),
+  };
+}
 
 final filteredConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
   final connections = ref.watch(connectionsProvider);
   final query = ref.watch(connectionsSearchProvider).toLowerCase().trim();
   final keywords = ref.watch(connectionsKeywordsProvider);
+  final sortType = ref.watch(connectionsSortTypeProvider);
 
-  return connections.where((item) {
-    if (query.isNotEmpty) {
-      final networkText = item.metadata.network.toLowerCase();
-      final hostText = item.metadata.host.toLowerCase();
-      final destinationIPText = item.metadata.destinationIP.toLowerCase();
-      final processText = item.metadata.process.toLowerCase();
-      final chainsText = item.chains.join('').toLowerCase();
-      final matchesQuery = networkText.contains(query) ||
-          hostText.contains(query) ||
-          destinationIPText.contains(query) ||
-          processText.contains(query) ||
-          chainsText.contains(query);
-      if (!matchesQuery) return false;
-    }
-    if (keywords.isNotEmpty) {
-      final chains = item.chains;
-      final process = item.metadata.process;
-      final matchesKeywords = {...chains, process}.containsAll(keywords);
-      if (!matchesKeywords) return false;
-    }
-    return true;
-  }).toList();
+  return _sortTrackerInfos(
+    _filterTrackerInfos(connections, query, keywords),
+    sortType,
+  );
+});
+
+final filteredClosedConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
+  final requests = ref.watch(requestsProvider.select((s) => s.list));
+  final query = ref.watch(connectionsSearchProvider).toLowerCase().trim();
+  final keywords = ref.watch(connectionsKeywordsProvider);
+  final sortType = ref.watch(connectionsSortTypeProvider);
+
+  return _sortTrackerInfos(
+    _filterTrackerInfos(requests, query, keywords),
+    sortType,
+  );
 });
