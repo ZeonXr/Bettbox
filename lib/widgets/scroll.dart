@@ -22,13 +22,14 @@ class CommonScrollBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasController = controller != null;
     return Scrollbar(
       controller: controller,
-      thumbVisibility: thumbVisibility,
-      trackVisibility: trackVisibility,
+      thumbVisibility: hasController ? thumbVisibility : false,
+      trackVisibility: hasController ? trackVisibility : false,
       thickness: 8,
       radius: const Radius.circular(8),
-      interactive: true,
+      interactive: hasController,
       child: child,
     );
   }
@@ -84,21 +85,23 @@ class _ScrollToEndBoxState<T> extends State<ScrollToEndBox<T>> {
       _handleTryToEnd().then((_) => _isFastToEnd = false);
       return;
     }
-    if (widget.enable && !_equals.equals(oldWidget.dataSource, widget.dataSource)) {
+    if (widget.enable &&
+        !_equals.equals(oldWidget.dataSource, widget.dataSource)) {
       _handleTryToEnd();
     }
   }
 
   @override
-  Widget build(BuildContext context) => NotificationListener<UserScrollNotification>(
-    onNotification: (n) {
-      if (!_isFastToEnd && widget.onCancelToEnd != null) {
-        widget.onCancelToEnd!();
-      }
-      return false;
-    },
-    child: widget.child,
-  );
+  Widget build(BuildContext context) =>
+      NotificationListener<UserScrollNotification>(
+        onNotification: (n) {
+          if (!_isFastToEnd && widget.onCancelToEnd != null) {
+            widget.onCancelToEnd!();
+          }
+          return false;
+        },
+        child: widget.child,
+      );
 }
 
 class CacheItemExtentListView extends StatefulWidget {
@@ -126,7 +129,8 @@ class CacheItemExtentListView extends StatefulWidget {
   });
 
   @override
-  State<CacheItemExtentListView> createState() => _CacheItemExtentListViewState();
+  State<CacheItemExtentListView> createState() =>
+      _CacheItemExtentListViewState();
 }
 
 class _CacheItemExtentListViewState extends State<CacheItemExtentListView> {
@@ -137,8 +141,12 @@ class _CacheItemExtentListViewState extends State<CacheItemExtentListView> {
   }
 
   void _updateCache() {
-    globalState.computeHeightMapCache[widget.tag]?.updateMaxLength(widget.itemCount);
-    globalState.computeHeightMapCache[widget.tag] ??= FixedMap(widget.itemCount);
+    globalState.computeHeightMapCache[widget.tag]?.updateMaxLength(
+      widget.itemCount,
+    );
+    globalState.computeHeightMapCache[widget.tag] ??= FixedMap(
+      widget.itemCount,
+    );
   }
 
   @override
@@ -193,8 +201,12 @@ class _CacheItemExtentSliverReorderableListState
   }
 
   void _updateCache() {
-    globalState.computeHeightMapCache[widget.tag]?.updateMaxLength(widget.itemCount);
-    globalState.computeHeightMapCache[widget.tag] ??= FixedMap(widget.itemCount);
+    globalState.computeHeightMapCache[widget.tag]?.updateMaxLength(
+      widget.itemCount,
+    );
+    globalState.computeHeightMapCache[widget.tag] ??= FixedMap(
+      widget.itemCount,
+    );
   }
 
   @override
@@ -203,10 +215,11 @@ class _CacheItemExtentSliverReorderableListState
     return SliverReorderableList(
       itemBuilder: widget.itemBuilder,
       itemCount: widget.itemCount,
-      itemExtentBuilder: (index, _) => globalState.computeHeightMapCache[widget.tag]?.updateCacheValue(
-        widget.keyBuilder(index),
-        () => widget.itemExtentBuilder(index),
-      ),
+      itemExtentBuilder: (index, _) =>
+          globalState.computeHeightMapCache[widget.tag]?.updateCacheValue(
+            widget.keyBuilder(index),
+            () => widget.itemExtentBuilder(index),
+          ),
       onReorder: widget.onReorder,
       proxyDecorator: widget.proxyDecorator,
     );
