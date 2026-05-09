@@ -5,6 +5,19 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+function Invoke-NativeCommand {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath,
+    [string[]]$Arguments = @()
+  )
+
+  & $FilePath @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "$FilePath failed with exit code $LASTEXITCODE"
+  }
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (-not $OutputDll) {
   $OutputDll = Join-Path $repoRoot 'windows\third_party\flutter_js\arm64\quickjs_c_bridge.dll'
@@ -32,7 +45,7 @@ if (Test-Path $workingRoot) {
 }
 New-Item -ItemType Directory -Force -Path $workingRoot | Out-Null
 
-git clone --depth 1 https://github.com/abner/quickjs-c-bridge $sourceRoot
+Invoke-NativeCommand git @('clone', '--depth', '1', 'https://github.com/abner/quickjs-c-bridge', $sourceRoot)
 
 $quickjsPath = Join-Path $sourceRoot 'cxx\quickjs\quickjs.c'
 $libregexpPath = Join-Path $sourceRoot 'cxx\quickjs\libregexp.c'
@@ -86,14 +99,19 @@ if (-not (Test-Path $cmakeExe)) {
   $cmakeExe = 'cmake'
 }
 
-& $cmakeExe -S (Join-Path $sourceRoot 'windows') -B $buildRoot -G 'NMake Makefiles' `
-  -DCMAKE_BUILD_TYPE=Release `
-  -DCMAKE_C_COMPILER=$clangExeForCmake `
-  -DCMAKE_CXX_COMPILER=$clangxxExeForCmake `
-  -DCMAKE_RC_COMPILER=$rcExeForCmake `
-  -DCMAKE_MAKE_PROGRAM=$nmakeExeForCmake
+$cmakeConfigureArgs = @(
+  '-S', (Join-Path $sourceRoot 'windows'),
+  '-B', $buildRoot,
+  '-G', 'NMake Makefiles',
+  '-DCMAKE_BUILD_TYPE=Release',
+  "-DCMAKE_C_COMPILER=$clangExeForCmake",
+  "-DCMAKE_CXX_COMPILER=$clangxxExeForCmake",
+  "-DCMAKE_RC_COMPILER=$rcExeForCmake",
+  "-DCMAKE_MAKE_PROGRAM=$nmakeExeForCmake"
+)
+Invoke-NativeCommand $cmakeExe $cmakeConfigureArgs
 
-& $cmakeExe --build $buildRoot
+Invoke-NativeCommand $cmakeExe @('--build', $buildRoot)
 
 $outputDirectory = Split-Path -Parent $OutputDll
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
