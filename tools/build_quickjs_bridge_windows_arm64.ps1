@@ -121,7 +121,16 @@ Invoke-NativeCommand $cmakeExe @('--build', $buildRoot)
 
 $outputDirectory = Split-Path -Parent $OutputDll
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
-Copy-Item (Join-Path $buildRoot 'quickjs_c_bridge.dll') $OutputDll -Force
+$builtDll = @(
+  (Join-Path $buildRoot 'quickjs_c_bridge.dll'),
+  (Join-Path $buildRoot 'libquickjs_c_bridge.dll')
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $builtDll) {
+  $availableDlls = Get-ChildItem $buildRoot -Filter '*.dll' -Recurse -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty FullName
+  throw "quickjs_c_bridge.dll was not found in $buildRoot. Available DLLs: $($availableDlls -join ', ')"
+}
+Copy-Item $builtDll $OutputDll -Force
 
 $dumpbinCommand = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
 if ($dumpbinCommand) {
