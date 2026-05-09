@@ -23,19 +23,6 @@ if (-not $OutputDll) {
   $OutputDll = Join-Path $repoRoot 'windows\third_party\flutter_js\arm64\quickjs_c_bridge.dll'
 }
 
-if (-not $env:CLANGARM64_BIN) {
-  $env:CLANGARM64_BIN = 'C:\clangarm64\bin'
-}
-
-$clangExe = Join-Path $env:CLANGARM64_BIN 'clang.exe'
-$clangxxExe = Join-Path $env:CLANGARM64_BIN 'clang++.exe'
-if (-not (Test-Path $clangExe)) {
-  throw "clang.exe not found at $clangExe"
-}
-if (-not (Test-Path $clangxxExe)) {
-  throw "clang++.exe not found at $clangxxExe"
-}
-
 $workingRoot = Join-Path $env:RUNNER_TEMP 'bettbox-quickjs-arm64'
 $sourceRoot = Join-Path $workingRoot 'quickjs-c-bridge'
 $buildRoot = Join-Path $workingRoot 'build'
@@ -71,66 +58,65 @@ if ($libregexpContent -notmatch '#ifdef _MSC_VER\r?\n#include <malloc.h>\r?\n#en
 }
 Set-Content -Path $libregexpPath -Value $libregexpContent -NoNewline
 
-$nmakeCommand = Get-Command nmake.exe -ErrorAction SilentlyContinue
-$nmakeExe = if ($nmakeCommand) { $nmakeCommand.Source } else { $null }
-if (-not $nmakeExe) {
-  $visualStudioRoots = @(
-    'C:\Program Files\Microsoft Visual Studio',
-    'C:\Program Files (x86)\Microsoft Visual Studio'
-  ) | Where-Object { Test-Path $_ }
-
-  $nmakeExe = Get-ChildItem $visualStudioRoots -Recurse -Filter 'nmake.exe' |
-    Where-Object { $_.FullName -match '\\Host(arm64|x64)\\arm64\\nmake\.exe$' } |
-    Select-Object -First 1 -ExpandProperty FullName
-}
-if (-not $nmakeExe) {
-  throw 'nmake.exe for ARM64 was not found in PATH or Visual Studio tools'
-}
-$env:PATH = "$(Split-Path -Parent $nmakeExe);$env:PATH"
-
-$rcExe = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin' -Recurse -Filter 'rc.exe' |
-  Where-Object { $_.FullName -match '\\arm64\\rc\.exe$' } |
-  Select-Object -First 1 -ExpandProperty FullName
-if (-not $rcExe) {
-  throw 'rc.exe not found in Windows Kits 10'
-}
-
-$clangExeForCmake = $clangExe -replace '\\', '/'
-$clangxxExeForCmake = $clangxxExe -replace '\\', '/'
-$nmakeExeForCmake = $nmakeExe -replace '\\', '/'
-$rcExeForCmake = $rcExe -replace '\\', '/'
-
 $cmakeExe = 'C:\Program Files\CMake\bin\cmake.exe'
 if (-not (Test-Path $cmakeExe)) {
   $cmakeExe = 'cmake'
 }
 
+$hadCc = Test-Path Env:CC
+$hadCxx = Test-Path Env:CXX
+$previousCc = $env:CC
+$previousCxx = $env:CXX
+if (Test-Path Env:CC) {
+  Remove-Item Env:CC
+}
+if (Test-Path Env:CXX) {
+  Remove-Item Env:CXX
+}
+
 $cmakeConfigureArgs = @(
   '-S', (Join-Path $sourceRoot 'windows'),
   '-B', $buildRoot,
-  '-G', 'NMake Makefiles',
-  '-DCMAKE_BUILD_TYPE=Release',
-  "-DCMAKE_C_COMPILER=$clangExeForCmake",
-  "-DCMAKE_CXX_COMPILER=$clangxxExeForCmake",
-  "-DCMAKE_RC_COMPILER=$rcExeForCmake",
-  "-DCMAKE_MAKE_PROGRAM=$nmakeExeForCmake"
+  '-G', 'Visual Studio 17 2022',
+  '-A', 'ARM64'
 )
-Invoke-NativeCommand $cmakeExe $cmakeConfigureArgs
-
-Invoke-NativeCommand $cmakeExe @('--build', $buildRoot)
+try {
+  Invoke-NativeCommand $cmakeExe $cmakeConfigureArgs
+  Invoke-NativeCommand $cmakeExe @('--build', $buildRoot, '--config', 'Release')
+}
+finally {
+  if ($hadCc) {
+    $env:CC = $previousCc
+  }
+  else {
+    Remove-Item Env:CC -ErrorAction SilentlyContinue
+  }
+  if ($hadCxx) {
+    $env:CXX = $previousCxx
+  }
+  else {
+    Remove-Item Env:CXX -ErrorAction SilentlyContinue
+  }
+}
 
 $outputDirectory = Split-Path -Parent $OutputDll
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 $builtDll = @(
-  (Join-Path $buildRoot 'quickjs_c_bridge.dll'),
-  (Join-Path $buildRoot 'libquickjs_c_bridge.dll')
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
+  Get-ChildItem $buildRoot -Filter 'quickjs_c_bridge.dll' -Recurse -ErrorAction SilentlyContinue
+  Get-ChildItem $buildRoot -Filter 'libquickjs_c_bridge.dll' -Recurse -ErrorAction SilentlyContinue
+) | Select-Object -First 1
 if (-not $builtDll) {
   $availableDlls = Get-ChildItem $buildRoot -Filter '*.dll' -Recurse -ErrorAction SilentlyContinue |
     Select-Object -ExpandProperty FullName
   throw "quickjs_c_bridge.dll was not found in $buildRoot. Available DLLs: $($availableDlls -join ', ')"
 }
-Copy-Item $builtDll $OutputDll -Force
+Copy-Item $builtDll.FullName $OutputDll -Force
+
+$quickJsDll = Get-ChildItem $buildRoot -Filter 'quickjs.dll' -Recurse -ErrorAction SilentlyContinue |
+  Select-Object -First 1
+if ($quickJsDll) {
+  Copy-Item $quickJsDll.FullName (Join-Path $outputDirectory 'quickjs.dll') -Force
+}
 
 $dumpbinCommand = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
 if ($dumpbinCommand) {
