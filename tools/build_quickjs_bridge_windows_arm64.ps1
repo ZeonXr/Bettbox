@@ -18,6 +18,48 @@ function Invoke-NativeCommand {
   }
 }
 
+function Resolve-NinjaPath {
+  $ninjaCommand = Get-Command ninja.exe -ErrorAction SilentlyContinue
+  if ($ninjaCommand) {
+    return $ninjaCommand.Source
+  }
+
+  $knownNinjaPaths = @(
+    (Join-Path $env:ProgramFiles 'CMake\bin\ninja.exe'),
+    (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'),
+    (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'),
+    (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe')
+  )
+  foreach ($knownNinjaPath in $knownNinjaPaths) {
+    if ($knownNinjaPath -and (Test-Path $knownNinjaPath)) {
+      return $knownNinjaPath
+    }
+  }
+
+  throw 'ninja.exe was not found. Install Ninja or make it available on PATH.'
+}
+
+function Resolve-ClangArm64Bin {
+  if ($env:CLANGARM64_BIN -and (Test-Path $env:CLANGARM64_BIN)) {
+    return (Resolve-Path $env:CLANGARM64_BIN).Path
+  }
+  if ($env:CLANGARM64_ROOT) {
+    $binPath = Join-Path $env:CLANGARM64_ROOT 'bin'
+    if (Test-Path $binPath) {
+      return (Resolve-Path $binPath).Path
+    }
+  }
+  if ($env:CC -and (Test-Path $env:CC)) {
+    return (Split-Path -Parent (Resolve-Path $env:CC).Path)
+  }
+  if (Test-Path 'C:\clangarm64\bin') {
+    return (Resolve-Path 'C:\clangarm64\bin').Path
+  }
+
+  throw 'llvm-mingw ARM64 toolchain was not found. Expected CLANGARM64_BIN, CLANGARM64_ROOT, CC, or C:\clangarm64\bin.'
+}
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (-not $OutputDll) {
   $OutputDll = Join-Path $repoRoot 'windows\third_party\flutter_js\arm64\quickjs_c_bridge.dll'
@@ -50,28 +92,6 @@ if ($quickjsContent -notmatch 'JSClassID JS_GetClassID\(JSValueConst obj\)\r?\n\
 if ($quickjsContent -notmatch '#include <WinSock2.h>\r?\n#include <malloc.h>') {
   $quickjsContent = $quickjsContent -replace '#include <WinSock2.h>\r?\n', "#include <WinSock2.h>`r`n#include <malloc.h>`r`n"
 }
-$quickjsContent = $quickjsContent -replace '    JS_CFUNC_MAGIC_DEF\("min", 2, js_math_min_max, 0 \),\r?\n    JS_CFUNC_MAGIC_DEF\("max", 2, js_math_min_max, 1 \),\r?\n', ''
-if ($quickjsContent -notmatch 'JS_NewCFunctionMagic\(ctx, js_math_min_max, "min", 2,') {
-  $quickjsMathRegistration = @'
-    obj1 = JS_GetPropertyStr(ctx, ctx->global_obj, "Math");
-    JS_DefinePropertyValueStr(ctx, obj1, "min",
-                              JS_NewCFunctionMagic(ctx, js_math_min_max, "min", 2,
-                                                   JS_CFUNC_generic_magic, 0),
-                              JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-    JS_DefinePropertyValueStr(ctx, obj1, "max",
-                              JS_NewCFunctionMagic(ctx, js_math_min_max, "max", 2,
-                                                   JS_CFUNC_generic_magic, 1),
-                              JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-    JS_FreeValue(ctx, obj1);
-'@
-  $quickjsContent = $quickjsContent -replace '(    JS_SetPropertyFunctionList\(ctx, ctx->global_obj, js_math_obj, countof\(js_math_obj\)\);\r?\n)', "`$1$quickjsMathRegistration"
-}
-if ($quickjsContent -match 'JS_CFUNC_MAGIC_DEF\("min", 2, js_math_min_max, 0 \)' -or
-    $quickjsContent -match 'JS_CFUNC_MAGIC_DEF\("max", 2, js_math_min_max, 1 \)' -or
-    $quickjsContent -notmatch 'JS_NewCFunctionMagic\(ctx, js_math_min_max, "min", 2,' -or
-    $quickjsContent -notmatch 'JS_NewCFunctionMagic\(ctx, js_math_min_max, "max", 2,') {
-  throw 'Failed to patch QuickJS Math.min/Math.max runtime registration for MSVC.'
-}
 Set-Content -Path $quickjsPath -Value $quickjsContent -NoNewline
 
 $libregexpContent = Get-Content $libregexpPath -Raw
@@ -85,41 +105,28 @@ if (-not (Test-Path $cmakeExe)) {
   $cmakeExe = 'cmake'
 }
 
-$hadCc = Test-Path Env:CC
-$hadCxx = Test-Path Env:CXX
-$previousCc = $env:CC
-$previousCxx = $env:CXX
-if (Test-Path Env:CC) {
-  Remove-Item Env:CC
+$clangArm64Bin = Resolve-ClangArm64Bin
+$clangExe = Join-Path $clangArm64Bin 'clang.exe'
+$clangxxExe = Join-Path $clangArm64Bin 'clang++.exe'
+if (-not (Test-Path $clangExe)) {
+  throw "clang.exe was not found at $clangExe"
 }
-if (Test-Path Env:CXX) {
-  Remove-Item Env:CXX
+if (-not (Test-Path $clangxxExe)) {
+  throw "clang++.exe was not found at $clangxxExe"
 }
+$ninjaExe = Resolve-NinjaPath
 
 $cmakeConfigureArgs = @(
   '-S', (Join-Path $sourceRoot 'windows'),
   '-B', $buildRoot,
-  '-G', 'Visual Studio 17 2022',
-  '-A', 'ARM64'
+  '-G', 'Ninja',
+  '-DCMAKE_BUILD_TYPE=Release',
+  "-DCMAKE_C_COMPILER=$clangExe",
+  "-DCMAKE_CXX_COMPILER=$clangxxExe",
+  "-DCMAKE_MAKE_PROGRAM=$ninjaExe"
 )
-try {
-  Invoke-NativeCommand $cmakeExe $cmakeConfigureArgs
-  Invoke-NativeCommand $cmakeExe @('--build', $buildRoot, '--config', 'Release')
-}
-finally {
-  if ($hadCc) {
-    $env:CC = $previousCc
-  }
-  else {
-    Remove-Item Env:CC -ErrorAction SilentlyContinue
-  }
-  if ($hadCxx) {
-    $env:CXX = $previousCxx
-  }
-  else {
-    Remove-Item Env:CXX -ErrorAction SilentlyContinue
-  }
-}
+Invoke-NativeCommand $cmakeExe $cmakeConfigureArgs
+Invoke-NativeCommand $cmakeExe @('--build', $buildRoot)
 
 $outputDirectory = Split-Path -Parent $OutputDll
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
@@ -138,6 +145,37 @@ $quickJsDll = Get-ChildItem $buildRoot -Filter 'quickjs.dll' -Recurse -ErrorActi
   Select-Object -First 1
 if ($quickJsDll) {
   Copy-Item $quickJsDll.FullName (Join-Path $outputDirectory 'quickjs.dll') -Force
+}
+
+$runtimeDllNames = @(
+  'libc++.dll',
+  'libc++abi.dll',
+  'libunwind.dll',
+  'libwinpthread-1.dll',
+  'libgcc_s_seh-1.dll',
+  'libssp-0.dll'
+)
+foreach ($runtimeDllName in $runtimeDllNames) {
+  $runtimeDll = Join-Path $clangArm64Bin $runtimeDllName
+  if (Test-Path $runtimeDll) {
+    Copy-Item $runtimeDll (Join-Path $outputDirectory $runtimeDllName) -Force
+  }
+}
+
+$llvmObjdump = Join-Path $clangArm64Bin 'llvm-objdump.exe'
+if (Test-Path $llvmObjdump) {
+  $dependencyNames = & $llvmObjdump -p $OutputDll |
+    ForEach-Object {
+      if ($_ -match 'DLL Name:\s*(.+\.dll)') {
+        $Matches[1]
+      }
+    }
+  foreach ($dependencyName in $dependencyNames) {
+    $dependencyDll = Join-Path $clangArm64Bin $dependencyName
+    if (Test-Path $dependencyDll) {
+      Copy-Item $dependencyDll (Join-Path $outputDirectory $dependencyName) -Force
+    }
+  }
 }
 
 $dumpbinCommand = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
