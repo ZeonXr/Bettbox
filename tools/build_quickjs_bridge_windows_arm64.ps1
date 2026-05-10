@@ -50,6 +50,30 @@ if ($quickjsContent -notmatch 'JSClassID JS_GetClassID\(JSValueConst obj\)\r?\n\
 if ($quickjsContent -notmatch '#include <WinSock2.h>\r?\n#include <malloc.h>') {
   $quickjsContent = $quickjsContent -replace '#include <WinSock2.h>\r?\n', "#include <WinSock2.h>`r`n#include <malloc.h>`r`n"
 }
+if ($quickjsContent -notmatch 'static JSValue js_math_min\(JSContext \*ctx, JSValueConst this_val,') {
+  $quickjsMathWrappers = @'
+
+static JSValue js_math_min(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv)
+{
+    return js_math_min_max(ctx, this_val, argc, argv, 0);
+}
+
+static JSValue js_math_max(JSContext *ctx, JSValueConst this_val,
+                           int argc, JSValueConst *argv)
+{
+    return js_math_min_max(ctx, this_val, argc, argv, 1);
+}
+'@
+  $quickjsContent = $quickjsContent -replace '(?s)(static JSValue js_math_min_max\(JSContext \*ctx, JSValueConst this_val,\r?\n\s+int argc, JSValueConst \*argv, int magic\)\r?\n\{.*?\r?\n\})(\r?\n\r?\nstatic double js_math_sign)', "`$1$quickjsMathWrappers`$2"
+}
+$quickjsContent = $quickjsContent -replace 'JS_CFUNC_MAGIC_DEF\("min", 2, js_math_min_max, 0 \)', 'JS_CFUNC_DEF("min", 2, js_math_min )'
+$quickjsContent = $quickjsContent -replace 'JS_CFUNC_MAGIC_DEF\("max", 2, js_math_min_max, 1 \)', 'JS_CFUNC_DEF("max", 2, js_math_max )'
+if ($quickjsContent -notmatch 'static JSValue js_math_min\(JSContext \*ctx, JSValueConst this_val,' -or
+    $quickjsContent -notmatch 'JS_CFUNC_DEF\("min", 2, js_math_min \)' -or
+    $quickjsContent -notmatch 'JS_CFUNC_DEF\("max", 2, js_math_max \)') {
+  throw 'Failed to patch QuickJS Math.min/Math.max for MSVC.'
+}
 Set-Content -Path $quickjsPath -Value $quickjsContent -NoNewline
 
 $libregexpContent = Get-Content $libregexpPath -Raw
