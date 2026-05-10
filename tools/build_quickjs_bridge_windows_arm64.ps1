@@ -18,54 +18,13 @@ function Invoke-NativeCommand {
   }
 }
 
-function Resolve-NinjaPath {
-  $ninjaCommand = Get-Command ninja.exe -ErrorAction SilentlyContinue
-  if ($ninjaCommand) {
-    return $ninjaCommand.Source
-  }
-
-  $knownNinjaPaths = @(
-    (Join-Path $env:ProgramFiles 'CMake\bin\ninja.exe'),
-    (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'),
-    (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'),
-    (Join-Path $env:ProgramFiles 'Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'),
-    (Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe')
-  )
-  foreach ($knownNinjaPath in $knownNinjaPaths) {
-    if ($knownNinjaPath -and (Test-Path $knownNinjaPath)) {
-      return $knownNinjaPath
-    }
-  }
-
-  throw 'ninja.exe was not found. Install Ninja or make it available on PATH.'
-}
-
-function Resolve-ClangArm64Bin {
-  if ($env:CLANGARM64_BIN -and (Test-Path $env:CLANGARM64_BIN)) {
-    return (Resolve-Path $env:CLANGARM64_BIN).Path
-  }
-  if ($env:CLANGARM64_ROOT) {
-    $binPath = Join-Path $env:CLANGARM64_ROOT 'bin'
-    if (Test-Path $binPath) {
-      return (Resolve-Path $binPath).Path
-    }
-  }
-  if ($env:CC -and (Test-Path $env:CC)) {
-    return (Split-Path -Parent (Resolve-Path $env:CC).Path)
-  }
-  if (Test-Path 'C:\clangarm64\bin') {
-    return (Resolve-Path 'C:\clangarm64\bin').Path
-  }
-
-  throw 'llvm-mingw ARM64 toolchain was not found. Expected CLANGARM64_BIN, CLANGARM64_ROOT, CC, or C:\clangarm64\bin.'
-}
-
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (-not $OutputDll) {
   $OutputDll = Join-Path $repoRoot 'windows\third_party\flutter_js\arm64\quickjs_c_bridge.dll'
 }
 
-$workingRoot = Join-Path $env:RUNNER_TEMP 'bettbox-quickjs-arm64'
+$tempRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { $env:TEMP }
+$workingRoot = Join-Path $tempRoot 'bettbox-quickjs-arm64'
 $sourceRoot = Join-Path $workingRoot 'quickjs-c-bridge'
 $buildRoot = Join-Path $workingRoot 'build'
 
@@ -105,31 +64,34 @@ if (-not (Test-Path $cmakeExe)) {
   $cmakeExe = 'cmake'
 }
 
-$clangArm64Bin = Resolve-ClangArm64Bin
-$clangExe = Join-Path $clangArm64Bin 'clang.exe'
-$clangxxExe = Join-Path $clangArm64Bin 'clang++.exe'
-if (-not (Test-Path $clangExe)) {
-  throw "clang.exe was not found at $clangExe"
-}
-if (-not (Test-Path $clangxxExe)) {
-  throw "clang++.exe was not found at $clangxxExe"
-}
-$ninjaExe = Resolve-NinjaPath
-
 $cmakeConfigureArgs = @(
   '-S', (Join-Path $sourceRoot 'windows'),
   '-B', $buildRoot,
-  '-G', 'Ninja',
-  '-DCMAKE_BUILD_TYPE=Release',
-  "-DCMAKE_C_COMPILER=$clangExe",
-  "-DCMAKE_CXX_COMPILER=$clangxxExe",
-  "-DCMAKE_MAKE_PROGRAM=$ninjaExe"
+  '-G', 'Visual Studio 17 2022',
+  '-A', 'ARM64'
 )
 Invoke-NativeCommand $cmakeExe $cmakeConfigureArgs
-Invoke-NativeCommand $cmakeExe @('--build', $buildRoot)
+Invoke-NativeCommand $cmakeExe @('--build', $buildRoot, '--config', 'Release')
 
 $outputDirectory = Split-Path -Parent $OutputDll
 New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
+
+$staleRuntimeDllNames = @(
+  'libc++.dll',
+  'libc++abi.dll',
+  'libunwind.dll',
+  'libwinpthread-1.dll',
+  'libgcc_s_seh-1.dll',
+  'libssp-0.dll',
+  'quickjs.dll'
+)
+foreach ($staleRuntimeDllName in $staleRuntimeDllNames) {
+  $staleRuntimeDll = Join-Path $outputDirectory $staleRuntimeDllName
+  if (Test-Path $staleRuntimeDll) {
+    Remove-Item $staleRuntimeDll -Force
+  }
+}
+
 $builtDll = @(
   Get-ChildItem $buildRoot -Filter 'quickjs_c_bridge.dll' -Recurse -ErrorAction SilentlyContinue
   Get-ChildItem $buildRoot -Filter 'libquickjs_c_bridge.dll' -Recurse -ErrorAction SilentlyContinue
@@ -144,38 +106,8 @@ Copy-Item $builtDll.FullName $OutputDll -Force
 $quickJsDll = Get-ChildItem $buildRoot -Filter 'quickjs.dll' -Recurse -ErrorAction SilentlyContinue |
   Select-Object -First 1
 if ($quickJsDll) {
-  Copy-Item $quickJsDll.FullName (Join-Path $outputDirectory 'quickjs.dll') -Force
-}
-
-$runtimeDllNames = @(
-  'libc++.dll',
-  'libc++abi.dll',
-  'libunwind.dll',
-  'libwinpthread-1.dll',
-  'libgcc_s_seh-1.dll',
-  'libssp-0.dll'
-)
-foreach ($runtimeDllName in $runtimeDllNames) {
-  $runtimeDll = Join-Path $clangArm64Bin $runtimeDllName
-  if (Test-Path $runtimeDll) {
-    Copy-Item $runtimeDll (Join-Path $outputDirectory $runtimeDllName) -Force
-  }
-}
-
-$llvmObjdump = Join-Path $clangArm64Bin 'llvm-objdump.exe'
-if (Test-Path $llvmObjdump) {
-  $dependencyNames = & $llvmObjdump -p $OutputDll |
-    ForEach-Object {
-      if ($_ -match 'DLL Name:\s*(.+\.dll)') {
-        $Matches[1]
-      }
-    }
-  foreach ($dependencyName in $dependencyNames) {
-    $dependencyDll = Join-Path $clangArm64Bin $dependencyName
-    if (Test-Path $dependencyDll) {
-      Copy-Item $dependencyDll (Join-Path $outputDirectory $dependencyName) -Force
-    }
-  }
+  $outputQuickJsDll = Join-Path $outputDirectory 'quickjs.dll'
+  Copy-Item $quickJsDll.FullName $outputQuickJsDll -Force
 }
 
 $dumpbinCommand = Get-Command dumpbin.exe -ErrorAction SilentlyContinue
