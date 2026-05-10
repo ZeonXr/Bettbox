@@ -76,6 +76,11 @@ jobs:
         with:
           targets: ${{ matrix.arch == 'arm64' && 'aarch64-pc-windows-msvc' || 'x86_64-pc-windows-msvc' }}
 
+      - name: Enable Git long paths (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
+
       - name: Setup Keystore (Android)
         if: matrix.platform == 'android'
         run: |
