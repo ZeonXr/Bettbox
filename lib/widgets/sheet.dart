@@ -96,6 +96,7 @@ class AdaptiveSheetScaffold extends StatefulWidget {
   final SheetType type;
   final Widget body;
   final String title;
+  final Widget? titleStatus;
   final List<Widget> actions;
 
   const AdaptiveSheetScaffold({
@@ -103,6 +104,7 @@ class AdaptiveSheetScaffold extends StatefulWidget {
     required this.type,
     required this.body,
     required this.title,
+    this.titleStatus,
     this.actions = const [],
   });
 
@@ -111,6 +113,26 @@ class AdaptiveSheetScaffold extends StatefulWidget {
 }
 
 class _AdaptiveSheetScaffoldState extends State<AdaptiveSheetScaffold> {
+  Widget _buildTitle() {
+    final titleStatus = widget.titleStatus;
+    if (titleStatus == null) {
+      return Text(widget.title);
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            widget.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 12),
+        titleStatus,
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final backgroundColor = context.colorScheme.surface;
@@ -118,14 +140,10 @@ class _AdaptiveSheetScaffoldState extends State<AdaptiveSheetScaffold> {
     final sideSheet = widget.type == SheetType.sideSheet;
     final appBar = AppBar(
       forceMaterialTransparency: bottomSheet ? true : false,
-      automaticallyImplyLeading: bottomSheet
-          ? false
-          : widget.actions.isEmpty && sideSheet
-          ? false
-          : true,
+      automaticallyImplyLeading: !bottomSheet && !sideSheet,
       centerTitle: bottomSheet,
       backgroundColor: backgroundColor,
-      title: Text(widget.title),
+      title: _buildTitle(),
       actions: genActions([
         if (widget.actions.isEmpty && sideSheet) CloseButton(),
         ...widget.actions,

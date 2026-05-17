@@ -53,7 +53,9 @@ class _HomePageState extends State<HomePage> {
                     navigationItems: navigationItems,
                     selectedIndex: currentIndex,
                     onTabChange: (index) {
-                      globalState.appController.toPage(navigationItems[index].label);
+                      globalState.appController.toPage(
+                        navigationItems[index].label,
+                      );
                     },
                   );
             if (isMobile) {
@@ -162,7 +164,10 @@ class _HomePageState extends State<HomePage> {
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? context.colorScheme.secondaryContainer
@@ -173,39 +178,36 @@ class _HomePageState extends State<HomePage> {
                                   color: context.colorScheme.primary,
                                   width: 2,
                                 )
-                              : Border.all(
-                                  color: Colors.transparent,
-                                  width: 2,
-                                ),
+                              : Border.all(color: Colors.transparent, width: 2),
                         ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconTheme(
-                                data: IconThemeData(
-                                  color: isSelected
-                                      ? context.colorScheme.onSecondaryContainer
-                                      : context.colorScheme.onSurfaceVariant,
-                                  size: 24,
-                                ),
-                                child: item.icon,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconTheme(
+                              data: IconThemeData(
+                                color: isSelected
+                                    ? context.colorScheme.onSecondaryContainer
+                                    : context.colorScheme.onSurfaceVariant,
+                                size: 24,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _getLocalizedLabel(item.label),
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? context.colorScheme.onSecondaryContainer
-                                      : context.colorScheme.onSurfaceVariant,
-                                  fontSize: 12,
-                                ),
+                              child: item.icon,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _getLocalizedLabel(item.label),
+                              style: TextStyle(
+                                color: isSelected
+                                    ? context.colorScheme.onSecondaryContainer
+                                    : context.colorScheme.onSurfaceVariant,
+                                fontSize: 12,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                ),
               );
             }).toList(),
           ),
@@ -278,9 +280,10 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
   }
 
   int get _pageIndex {
-    return widget.navigationItems.indexWhere(
-      (item) => item.label == globalState.appState.pageLabel,
-    );
+    final pageLabel = globalState.appState.pageLabel == PageLabel.requests
+        ? PageLabel.connections
+        : globalState.appState.pageLabel;
+    return widget.navigationItems.indexWhere((item) => item.label == pageLabel);
   }
 
   Future<void> _toPage(
@@ -290,15 +293,18 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
     if (!mounted) {
       return;
     }
+    final targetPageLabel = pageLabel == PageLabel.requests
+        ? PageLabel.connections
+        : pageLabel;
     final index = widget.navigationItems.indexWhere(
-      (item) => item.label == pageLabel,
+      (item) => item.label == targetPageLabel,
     );
     if (index == -1) {
       return;
     }
-    
+
     FocusManager.instance.primaryFocus?.unfocus();
-    
+
     final isAnimateToPage = ref.read(appSettingProvider).isAnimateToPage;
     final isMobile = ref.read(isMobileViewProvider);
     if (isAnimateToPage && isMobile && !ignoreAnimateTo) {

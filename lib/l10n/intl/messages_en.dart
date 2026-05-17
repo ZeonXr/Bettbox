@@ -85,6 +85,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "ago": MessageLookupByLibrary.simpleMessage(" Ago"),
     "agree": MessageLookupByLibrary.simpleMessage("Agree"),
+    "all": MessageLookupByLibrary.simpleMessage("All"),
     "allApps": MessageLookupByLibrary.simpleMessage("All Apps"),
     "allowBypass": MessageLookupByLibrary.simpleMessage("Allow Bypassing VPN"),
     "allowBypassDesc": MessageLookupByLibrary.simpleMessage(
@@ -97,6 +98,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "alreadyInWhitelist": MessageLookupByLibrary.simpleMessage(
       "Already in whitelist",
     ),
+    "activeConnections": MessageLookupByLibrary.simpleMessage("Active"),
     "app": MessageLookupByLibrary.simpleMessage("App"),
     "appAccessControl": MessageLookupByLibrary.simpleMessage(
       "App Access Control",
@@ -202,6 +204,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "clipboardExport": MessageLookupByLibrary.simpleMessage(
       "Export to Clipboard",
     ),
+    "closedConnections": MessageLookupByLibrary.simpleMessage("Closed"),
     "clipboardImport": MessageLookupByLibrary.simpleMessage(
       "Import from Clipboard",
     ),
@@ -220,6 +223,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "confirm": MessageLookupByLibrary.simpleMessage("Confirm"),
     "connection": MessageLookupByLibrary.simpleMessage("Active Connections"),
+    "connectionDetails": MessageLookupByLibrary.simpleMessage(
+      "Connection Details",
+    ),
     "connections": MessageLookupByLibrary.simpleMessage("Connections"),
     "connectionsDesc": MessageLookupByLibrary.simpleMessage(
       "View active connections",
@@ -327,6 +333,8 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "domain": MessageLookupByLibrary.simpleMessage("Domain"),
     "doubleBounce": MessageLookupByLibrary.simpleMessage("Double Bounce"),
+    "downloadAmount": MessageLookupByLibrary.simpleMessage("Download Amount"),
+    "downloadSpeed": MessageLookupByLibrary.simpleMessage("Download Speed"),
     "download": MessageLookupByLibrary.simpleMessage("Download"),
     "dozeSuspend": MessageLookupByLibrary.simpleMessage("Doze Support"),
     "dozeSuspendDesc": MessageLookupByLibrary.simpleMessage(
@@ -959,6 +967,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "sourceIp": MessageLookupByLibrary.simpleMessage("Source IP"),
     "specialProxy": MessageLookupByLibrary.simpleMessage("Special Proxy"),
     "specialRules": MessageLookupByLibrary.simpleMessage("Special Rules"),
+    "speedSort": MessageLookupByLibrary.simpleMessage("Speed"),
     "spinningLines": MessageLookupByLibrary.simpleMessage("Spinning Lines"),
     "stackMode": MessageLookupByLibrary.simpleMessage("Stack Mode"),
     "standard": MessageLookupByLibrary.simpleMessage("Standard"),
@@ -1017,11 +1026,13 @@ class MessageLookup extends MessageLookupByLibrary {
     "threeInOut": MessageLookupByLibrary.simpleMessage("Three In Out"),
     "tight": MessageLookupByLibrary.simpleMessage("Compact"),
     "time": MessageLookupByLibrary.simpleMessage("Time"),
+    "timeSort": MessageLookupByLibrary.simpleMessage("Creation Time"),
     "tip": MessageLookupByLibrary.simpleMessage("Tip"),
     "tlsPortSniffer": MessageLookupByLibrary.simpleMessage("TLS Port Sniffing"),
     "toggle": MessageLookupByLibrary.simpleMessage("Toggle"),
     "tonalSpotScheme": MessageLookupByLibrary.simpleMessage("Tonal Spot"),
     "tooManyRules": MessageLookupByLibrary.simpleMessage("Max 2 rules allowed"),
+    "totalSort": MessageLookupByLibrary.simpleMessage("Total Transfer"),
     "tools": MessageLookupByLibrary.simpleMessage("Tools"),
     "tproxyPort": MessageLookupByLibrary.simpleMessage("Tproxy Port"),
     "trafficUsage": MessageLookupByLibrary.simpleMessage("Traffic Usage"),
@@ -1066,6 +1077,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "unknown": MessageLookupByLibrary.simpleMessage("Unknown"),
     "unnamed": MessageLookupByLibrary.simpleMessage("Unnamed"),
     "update": MessageLookupByLibrary.simpleMessage("Update"),
+    "uploadAmount": MessageLookupByLibrary.simpleMessage("Upload Amount"),
+    "uploadSpeed": MessageLookupByLibrary.simpleMessage("Upload Speed"),
     "upload": MessageLookupByLibrary.simpleMessage("Upload"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlDesc": MessageLookupByLibrary.simpleMessage("Get profile via URL"),

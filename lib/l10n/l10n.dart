@@ -194,9 +194,49 @@ class AppLocalizations {
     return Intl.message('Upload', name: 'upload', desc: '', args: []);
   }
 
+  /// `Upload Amount`
+  String get uploadAmount {
+    return Intl.message(
+      'Upload Amount',
+      name: 'uploadAmount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Upload Speed`
+  String get uploadSpeed {
+    return Intl.message(
+      'Upload Speed',
+      name: 'uploadSpeed',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Download`
   String get download {
     return Intl.message('Download', name: 'download', desc: '', args: []);
+  }
+
+  /// `Download Amount`
+  String get downloadAmount {
+    return Intl.message(
+      'Download Amount',
+      name: 'downloadAmount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Download Speed`
+  String get downloadSpeed {
+    return Intl.message(
+      'Download Speed',
+      name: 'downloadSpeed',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `No Proxy`
@@ -1214,6 +1254,26 @@ class AppLocalizations {
     return Intl.message('Sort by Name', name: 'nameSort', desc: '', args: []);
   }
 
+  /// `Sort by Speed`
+  String get speedSort {
+    return Intl.message('Sort by Speed', name: 'speedSort', desc: '', args: []);
+  }
+
+  /// `Sort by Total`
+  String get totalSort {
+    return Intl.message(
+      'Sort by Total',
+      name: 'totalSort',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sort by Time`
+  String get timeSort {
+    return Intl.message('Sort by Time', name: 'timeSort', desc: '', args: []);
+  }
+
   /// `Please upload a file`
   String get pleaseUploadFile {
     return Intl.message(
@@ -1889,6 +1949,31 @@ class AppLocalizations {
     return Intl.message(
       'View recent request logs',
       name: 'requestsDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `All`
+  String get all {
+    return Intl.message('All', name: 'all', desc: '', args: []);
+  }
+
+  /// `Active`
+  String get activeConnections {
+    return Intl.message(
+      'Active',
+      name: 'activeConnections',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Closed`
+  String get closedConnections {
+    return Intl.message(
+      'Closed',
+      name: 'closedConnections',
       desc: '',
       args: [],
     );
@@ -4854,6 +4939,16 @@ class AppLocalizations {
     return Intl.message(
       'Active Connections',
       name: 'connection',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Connection Details`
+  String get connectionDetails {
+    return Intl.message(
+      'Connection Details',
+      name: 'connectionDetails',
       desc: '',
       args: [],
     );

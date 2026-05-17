@@ -85,6 +85,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "ago": MessageLookupByLibrary.simpleMessage("назад"),
     "agree": MessageLookupByLibrary.simpleMessage("Согласен"),
+    "all": MessageLookupByLibrary.simpleMessage("Все"),
     "allApps": MessageLookupByLibrary.simpleMessage("Все приложения"),
     "allowBypass": MessageLookupByLibrary.simpleMessage("Разрешить обход VPN"),
     "allowBypassDesc": MessageLookupByLibrary.simpleMessage(
@@ -97,6 +98,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "alreadyInWhitelist": MessageLookupByLibrary.simpleMessage(
       "Уже в белом списке",
     ),
+    "activeConnections": MessageLookupByLibrary.simpleMessage("Активные"),
     "app": MessageLookupByLibrary.simpleMessage("Приложение"),
     "appAccessControl": MessageLookupByLibrary.simpleMessage(
       "Контроль доступа приложений",
@@ -204,6 +206,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Автоматически получать ссылки из буфера обмена",
     ),
     "clipboardExport": MessageLookupByLibrary.simpleMessage("Экспорт в буфер"),
+    "closedConnections": MessageLookupByLibrary.simpleMessage("Закрытые"),
     "clipboardImport": MessageLookupByLibrary.simpleMessage("Импорт из буфера"),
     "color": MessageLookupByLibrary.simpleMessage("Цвет"),
     "colorSchemes": MessageLookupByLibrary.simpleMessage("Цветовые схемы"),
@@ -220,6 +223,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "confirm": MessageLookupByLibrary.simpleMessage("Подтвердить"),
     "connection": MessageLookupByLibrary.simpleMessage("Активные соединения"),
+    "connectionDetails": MessageLookupByLibrary.simpleMessage(
+      "Сведения о соединении",
+    ),
     "connections": MessageLookupByLibrary.simpleMessage("Соединения"),
     "connectionsDesc": MessageLookupByLibrary.simpleMessage(
       "Просмотр текущих соединений",
@@ -327,6 +333,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "doYouWantToPass": MessageLookupByLibrary.simpleMessage("Пропустить"),
     "domain": MessageLookupByLibrary.simpleMessage("Домен"),
     "doubleBounce": MessageLookupByLibrary.simpleMessage("Двойной отскок"),
+    "downloadAmount": MessageLookupByLibrary.simpleMessage("Объем загрузки"),
+    "downloadSpeed": MessageLookupByLibrary.simpleMessage("Скорость загрузки"),
     "download": MessageLookupByLibrary.simpleMessage("Загрузка"),
     "dozeSuspend": MessageLookupByLibrary.simpleMessage("Поддержка Doze"),
     "dozeSuspendDesc": MessageLookupByLibrary.simpleMessage(
@@ -971,6 +979,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "sourceIp": MessageLookupByLibrary.simpleMessage("IP источника"),
     "specialProxy": MessageLookupByLibrary.simpleMessage("Специальный прокси"),
     "specialRules": MessageLookupByLibrary.simpleMessage("Специальные правила"),
+    "speedSort": MessageLookupByLibrary.simpleMessage("Скорость"),
     "spinningLines": MessageLookupByLibrary.simpleMessage("Вращающиеся линии"),
     "stackMode": MessageLookupByLibrary.simpleMessage("Режим стека"),
     "standard": MessageLookupByLibrary.simpleMessage("Стандартный"),
@@ -1033,6 +1042,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "threeInOut": MessageLookupByLibrary.simpleMessage("Три точки"),
     "tight": MessageLookupByLibrary.simpleMessage("Компактный"),
     "time": MessageLookupByLibrary.simpleMessage("Время"),
+    "timeSort": MessageLookupByLibrary.simpleMessage("По времени"),
     "tip": MessageLookupByLibrary.simpleMessage("Подсказка"),
     "tlsPortSniffer": MessageLookupByLibrary.simpleMessage(
       "TLS порты сниффера",
@@ -1040,6 +1050,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "toggle": MessageLookupByLibrary.simpleMessage("Переключить"),
     "tonalSpotScheme": MessageLookupByLibrary.simpleMessage("Тональный акцент"),
     "tooManyRules": MessageLookupByLibrary.simpleMessage("Максимум 2 правила"),
+    "totalSort": MessageLookupByLibrary.simpleMessage("По трафику"),
     "tools": MessageLookupByLibrary.simpleMessage("Дополнительно"),
     "tproxyPort": MessageLookupByLibrary.simpleMessage("Порт Tproxy"),
     "trafficUsage": MessageLookupByLibrary.simpleMessage("Трафик"),
@@ -1092,6 +1103,8 @@ class MessageLookup extends MessageLookupByLibrary {
     "unknown": MessageLookupByLibrary.simpleMessage("Неизвестно"),
     "unnamed": MessageLookupByLibrary.simpleMessage("Без имени"),
     "update": MessageLookupByLibrary.simpleMessage("Обновить"),
+    "uploadAmount": MessageLookupByLibrary.simpleMessage("Объем отправки"),
+    "uploadSpeed": MessageLookupByLibrary.simpleMessage("Скорость отправки"),
     "upload": MessageLookupByLibrary.simpleMessage("Отправка"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlDesc": MessageLookupByLibrary.simpleMessage("Получить профиль по URL"),

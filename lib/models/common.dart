@@ -1,7 +1,5 @@
 // ignore_for_file: invalid_annotation_target
 
-import 'dart:math';
-
 import 'package:bett_box/common/common.dart';
 import 'package:bett_box/enum/enum.dart';
 import 'package:flutter/material.dart';
@@ -102,6 +100,13 @@ extension TrackerInfoExt on TrackerInfo {
       return '$process($uid)';
     }
     return process;
+  }
+
+  String get ruleText {
+    if (rulePayload.isNotEmpty) {
+      return '$rule($rulePayload)';
+    }
+    return rule;
   }
 }
 
@@ -242,12 +247,16 @@ class Traffic {
   }
 
   String toSpeedText() {
-    return '↑ $up/s   ↓ $down/s';
+    return '↑ ${up.speedShow}   ↓ ${down.speedShow}';
+  }
+
+  String toTransferText() {
+    return '${up.compactShow}↑ ${down.compactShow}↓';
   }
 
   @override
   String toString() {
-    return '$up↑ $down↓';
+    return toTransferText();
   }
 
   @override
@@ -325,44 +334,61 @@ class TrafficValue {
 
   String get show => '$showValue $showUnit';
 
-  String get shortShow =>
-      '${trafficValueShow.value.fixed(decimals: 1)} $showUnit';
+  String get compactShow => '$showValue$showUnit';
 
-  String get showValue => trafficValueShow.value.fixed();
+  String get speedShow =>
+      '$showValue${_getSpeedUnitText(trafficValueShow.unit)}';
+
+  String get showValue {
+    final valueShow = trafficValueShow;
+    return _formatValue(valueShow.value, valueShow.unit);
+  }
 
   String get showUnit => trafficValueShow.unit.name;
 
   TrafficValueShow get trafficValueShow {
-    if (_value > pow(1024, 4)) {
-      return TrafficValueShow(
-        value: _value / pow(1024, 4),
-        unit: TrafficUnit.TB,
-      );
+    var value = _value.toDouble();
+    var unitIndex = 0;
+    final units = TrafficUnit.values;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value = value / 1024;
+      unitIndex++;
     }
-    if (_value > pow(1024, 3)) {
-      return TrafficValueShow(
-        value: _value / pow(1024, 3),
-        unit: TrafficUnit.GB,
-      );
+    return TrafficValueShow(value: value, unit: units[unitIndex]);
+  }
+
+  String _formatValue(double value, TrafficUnit unit) {
+    if (unit == TrafficUnit.B) {
+      return value.round().toString();
     }
-    if (_value > pow(1024, 2)) {
-      return TrafficValueShow(
-        value: _value / pow(1024, 2),
-        unit: TrafficUnit.MB,
-      );
+    final decimals = value >= 100
+        ? 0
+        : value >= 10
+        ? 1
+        : 2;
+    return _trimTrailingZeros(value.fixed(decimals: decimals));
+  }
+
+  String _trimTrailingZeros(String value) {
+    if (!value.contains('.')) {
+      return value;
     }
-    if (_value > pow(1024, 1)) {
-      return TrafficValueShow(
-        value: _value / pow(1024, 1),
-        unit: TrafficUnit.KB,
-      );
-    }
-    return TrafficValueShow(value: _value.toDouble(), unit: TrafficUnit.B);
+    return value.replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  String _getSpeedUnitText(TrafficUnit unit) {
+    return switch (unit) {
+      TrafficUnit.B => 'B/s',
+      TrafficUnit.KB => 'K/s',
+      TrafficUnit.MB => 'M/s',
+      TrafficUnit.GB => 'G/s',
+      TrafficUnit.TB => 'T/s',
+    };
   }
 
   @override
   String toString() {
-    return '$showValue$showUnit';
+    return compactShow;
   }
 
   @override
@@ -541,8 +567,12 @@ abstract class Result<T> with _$Result<T> {
     @Default(false) bool needRestart,
   }) = _Result;
 
-  factory Result.success(T data, {bool needRestart = false}) =>
-      Result(data: data, type: ResultType.success, message: '', needRestart: needRestart);
+  factory Result.success(T data, {bool needRestart = false}) => Result(
+    data: data,
+    type: ResultType.success,
+    message: '',
+    needRestart: needRestart,
+  );
 
   factory Result.error(String message) =>
       Result(data: null, type: ResultType.error, message: message);
@@ -563,7 +593,11 @@ abstract class Script with _$Script {
     String? url,
   }) = _Script;
 
-  factory Script.create({required String label, required String content, String? url}) {
+  factory Script.create({
+    required String label,
+    required String content,
+    String? url,
+  }) {
     return Script(id: utils.uuidV4, label: label, content: content, url: url);
   }
 

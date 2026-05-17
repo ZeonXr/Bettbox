@@ -117,6 +117,8 @@ enum AccessControlMode { acceptSelected, rejectSelected }
 
 enum AccessSortType { none, name, time }
 
+enum ConnectionsSortType { none, trafficSpeed, totalTraffic, time }
+
 enum ProfileType { file, url }
 
 enum ResultType {

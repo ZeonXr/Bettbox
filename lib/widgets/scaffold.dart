@@ -26,6 +26,8 @@ class CommonScaffold extends StatefulWidget {
   final AppBarEditState? editState;
   final AppBarSearchState? searchState;
   final OnKeywordsUpdateCallback? onKeywordsUpdate;
+  final bool showKeywords;
+  final bool singleKeyword;
 
   const CommonScaffold({
     super.key,
@@ -40,6 +42,8 @@ class CommonScaffold extends StatefulWidget {
     this.searchState,
     this.floatingActionButton,
     this.onKeywordsUpdate,
+    this.showKeywords = true,
+    this.singleKeyword = false,
   });
 
   @override
@@ -150,6 +154,14 @@ class CommonScaffoldState extends State<CommonScaffold> {
   }
 
   void addKeyword(String keyword) {
+    if (widget.singleKeyword) {
+      if (_keywordsNotifier.value.length == 1 &&
+          _keywordsNotifier.value.first == keyword) {
+        return;
+      }
+      _keywordsNotifier.value = [keyword];
+      return;
+    }
     final isContains = _keywordsNotifier.value.contains(keyword);
     if (isContains) return;
     final keywords = List<String>.from(_keywordsNotifier.value)..add(keyword);
@@ -162,6 +174,46 @@ class CommonScaffoldState extends State<CommonScaffold> {
     final keywords = List<String>.from(_keywordsNotifier.value)
       ..remove(keyword);
     _keywordsNotifier.value = keywords;
+  }
+
+  Widget buildKeywords({
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+      horizontal: 16,
+      vertical: 16,
+    ),
+    WrapAlignment alignment = WrapAlignment.start,
+  }) {
+    return ValueListenableBuilder(
+      valueListenable: _keywordsNotifier,
+      builder: (_, keywords, _) {
+        if (widget.onKeywordsUpdate != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.onKeywordsUpdate!(keywords);
+          });
+        }
+        if (keywords.isEmpty) {
+          return SizedBox();
+        }
+        return Padding(
+          padding: padding,
+          child: Wrap(
+            alignment: alignment,
+            runSpacing: 8,
+            spacing: 8,
+            children: [
+              for (final keyword in keywords)
+                CommonChip(
+                  label: keyword,
+                  type: ChipType.delete,
+                  onPressed: () {
+                    _deleteKeyword(keyword);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Widget? _buildLeading() {
@@ -209,6 +261,7 @@ class CommonScaffoldState extends State<CommonScaffold> {
       ]);
     }
     return genActions([
+      ...actions,
       if (hasSearch)
         IconButton(
           onPressed: () {
@@ -216,7 +269,6 @@ class CommonScaffoldState extends State<CommonScaffold> {
           },
           icon: Icon(Icons.search),
         ),
-      ...actions,
     ]);
   }
 
@@ -290,39 +342,7 @@ class CommonScaffoldState extends State<CommonScaffold> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ValueListenableBuilder(
-            valueListenable: _keywordsNotifier,
-            builder: (_, keywords, _) {
-              if (widget.onKeywordsUpdate != null) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  widget.onKeywordsUpdate!(keywords);
-                });
-              }
-              if (keywords.isEmpty) {
-                return SizedBox();
-              }
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                child: Wrap(
-                  runSpacing: 8,
-                  spacing: 8,
-                  children: [
-                    for (final keyword in keywords)
-                      CommonChip(
-                        label: keyword,
-                        type: ChipType.delete,
-                        onPressed: () {
-                          _deleteKeyword(keyword);
-                        },
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
+          if (widget.showKeywords) buildKeywords(),
           Expanded(child: widget.body),
         ],
       ),

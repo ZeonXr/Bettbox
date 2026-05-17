@@ -53,14 +53,18 @@ final filteredLogsProvider = Provider<List<Log>>((ref) {
 
   return logs.where((item) {
     if (query.isNotEmpty) {
-      final matchesQuery = item.payload.toLowerCase().contains(query) ||
+      final matchesQuery =
+          item.payload.toLowerCase().contains(query) ||
           item.logLevel.name.toLowerCase().contains(query) ||
           item.dateTime.toLowerCase().contains(query);
       if (!matchesQuery) return false;
     }
     if (keywords.isNotEmpty) {
-      final itemStr = '${item.payload} ${item.logLevel.name} ${item.dateTime}'.toLowerCase();
-      final matchesKeywords = keywords.every((keyword) => itemStr.contains(keyword.toLowerCase()));
+      final itemStr = '${item.payload} ${item.logLevel.name} ${item.dateTime}'
+          .toLowerCase();
+      final matchesKeywords = keywords.every(
+        (keyword) => itemStr.contains(keyword.toLowerCase()),
+      );
       if (!matchesKeywords) return false;
     }
     return true;
@@ -104,7 +108,8 @@ final filteredRequestsProvider = Provider<List<TrackerInfo>>((ref) {
       final destinationIPText = item.metadata.destinationIP.toLowerCase();
       final processText = item.metadata.process.toLowerCase();
       final chainsText = item.chains.join('').toLowerCase();
-      final matchesQuery = networkText.contains(query) ||
+      final matchesQuery =
+          networkText.contains(query) ||
           hostText.contains(query) ||
           destinationIPText.contains(query) ||
           processText.contains(query) ||
@@ -301,14 +306,25 @@ class Init extends _$Init with AutoDisposeNotifierMixin {
 @riverpod
 class CurrentPageLabel extends _$CurrentPageLabel
     with AutoDisposeNotifierMixin {
+  PageLabel _normalize(PageLabel value) {
+    return value == PageLabel.requests ? PageLabel.connections : value;
+  }
+
   @override
   PageLabel build() {
-    return globalState.appState.pageLabel;
+    return _normalize(globalState.appState.pageLabel);
   }
 
   @override
   onUpdate(value) {
-    globalState.appState = globalState.appState.copyWith(pageLabel: value);
+    globalState.appState = globalState.appState.copyWith(
+      pageLabel: _normalize(value),
+    );
+  }
+
+  @override
+  set value(PageLabel value) {
+    super.value = _normalize(value);
   }
 }
 
@@ -448,36 +464,181 @@ class IsSmartStopped extends _$IsSmartStopped {
   }
 }
 
+enum ConnectionsTab { all, active }
+
 // Connections providers
 final connectionsProvider = StateProvider<List<TrackerInfo>>((ref) => []);
+final connectionHistoryProvider = StateProvider<List<TrackerInfo>>((ref) => []);
+final closedConnectionsProvider = StateProvider<List<TrackerInfo>>((ref) => []);
 final connectionsSearchProvider = StateProvider<String>((ref) => '');
 final connectionsKeywordsProvider = StateProvider<List<String>>((ref) => []);
+final connectionsTabProvider = StateProvider<ConnectionsTab>(
+  (ref) => ConnectionsTab.all,
+);
+final connectionsSortProvider = StateProvider<ConnectionsSortType>(
+  (ref) => ConnectionsSortType.none,
+);
 
-final filteredConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
+/// Tiebreaker: active connections before closed, then newer start time first.
+int _compareTrackerInfoTiebreaker(TrackerInfo a, TrackerInfo b, Set<String> activeIds) {
+  final aActive = activeIds.contains(a.id);
+  final bActive = activeIds.contains(b.id);
+  if (aActive && !bActive) return -1;
+  if (!aActive && bActive) return 1;
+  return b.start.compareTo(a.start);
+}
+
+List<TrackerInfo> _sortTrackerInfos(
+  List<TrackerInfo> connections,
+  ConnectionsSortType sortType, {
+  Set<String> activeIds = const <String>{},
+}) {
+  return switch (sortType) {
+    ConnectionsSortType.none => connections,
+    ConnectionsSortType.trafficSpeed => [...connections]..sort(
+        (a, b) {
+          final aSpeed = (a.uploadSpeed ?? 0) + (a.downloadSpeed ?? 0);
+          final bSpeed = (b.uploadSpeed ?? 0) + (b.downloadSpeed ?? 0);
+          final cmp = bSpeed.compareTo(aSpeed);
+          if (cmp != 0) return cmp;
+          return _compareTrackerInfoTiebreaker(a, b, activeIds);
+        },
+      ),
+    ConnectionsSortType.totalTraffic => [...connections]..sort(
+        (a, b) {
+          final cmp = (b.upload + b.download).compareTo(a.upload + a.download);
+          if (cmp != 0) return cmp;
+          return _compareTrackerInfoTiebreaker(a, b, activeIds);
+        },
+      ),
+    ConnectionsSortType.time => [...connections]..sort(
+        (a, b) {
+          final cmp = b.start.compareTo(a.start);
+          if (cmp != 0) return cmp;
+          final aActive = activeIds.contains(a.id);
+          final bActive = activeIds.contains(b.id);
+          if (aActive && !bActive) return -1;
+          if (!aActive && bActive) return 1;
+          return 0;
+        },
+      ),
+  };
+}
+
+bool _matchTrackerInfo(
+  TrackerInfo item, {
+  required String query,
+  required List<String> keywords,
+}) {
+  if (query.isNotEmpty) {
+    final networkText = item.metadata.network.toLowerCase();
+    final hostText = item.metadata.host.toLowerCase();
+    final destinationIPText = item.metadata.destinationIP.toLowerCase();
+    final processText = item.metadata.process.toLowerCase();
+    final chainsText = item.chains.join('').toLowerCase();
+    final ruleText = item.ruleText.toLowerCase();
+    final rulePayloadText = item.rulePayload.toLowerCase();
+    final matchesQuery =
+        networkText.contains(query) ||
+        hostText.contains(query) ||
+        destinationIPText.contains(query) ||
+        processText.contains(query) ||
+        ruleText.contains(query) ||
+        rulePayloadText.contains(query) ||
+        chainsText.contains(query);
+    if (!matchesQuery) return false;
+  }
+  if (keywords.isNotEmpty) {
+    final chains = item.chains;
+    final process = item.metadata.process;
+    final ruleText = item.ruleText;
+    final matchesKeywords = {
+      ...chains,
+      process,
+      ruleText,
+    }.containsAll(keywords);
+    if (!matchesKeywords) return false;
+  }
+  return true;
+}
+
+List<TrackerInfo> _filterTrackerInfos(
+  List<TrackerInfo> connections, {
+  required String query,
+  required List<String> keywords,
+}) {
+  return connections.where((item) {
+    return _matchTrackerInfo(item, query: query, keywords: keywords);
+  }).toList();
+}
+
+List<TrackerInfo> _dedupeTrackerInfos(List<TrackerInfo> connections) {
+  final ids = <String>{};
+  final result = <TrackerInfo>[];
+  for (final connection in connections) {
+    if (ids.add(connection.id)) {
+      result.add(connection);
+    }
+  }
+  return result;
+}
+
+final allConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
+  final activeConnections = ref.watch(connectionsProvider);
+  final activeIds = activeConnections.map((item) => item.id).toSet();
+  final closedConnections = ref.watch(closedConnectionsProvider);
+  final requestHistory = ref.watch(
+    requestsProvider.select((state) => state.list),
+  );
+
+  final requestOnlyHistory = requestHistory
+      .where((request) {
+        return !activeIds.contains(request.id);
+      })
+      .toList()
+      .reversed;
+
+  return _dedupeTrackerInfos([
+    ...activeConnections,
+    ...closedConnections,
+    ...requestOnlyHistory,
+  ]);
+});
+
+final filteredAllConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
+  final connections = ref.watch(allConnectionsProvider);
+  final query = ref.watch(connectionsSearchProvider).toLowerCase().trim();
+  final keywords = ref.watch(connectionsKeywordsProvider);
+  final sortType = ref.watch(connectionsSortProvider);
+  final activeIds = ref.watch(connectionsProvider).map((item) => item.id).toSet();
+
+  final filtered = _filterTrackerInfos(
+    connections,
+    query: query,
+    keywords: keywords,
+  );
+  return _sortTrackerInfos(filtered, sortType, activeIds: activeIds);
+});
+
+final filteredActiveConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
   final connections = ref.watch(connectionsProvider);
   final query = ref.watch(connectionsSearchProvider).toLowerCase().trim();
   final keywords = ref.watch(connectionsKeywordsProvider);
+  final sortType = ref.watch(connectionsSortProvider);
+  final activeIds = connections.map((item) => item.id).toSet();
 
-  return connections.where((item) {
-    if (query.isNotEmpty) {
-      final networkText = item.metadata.network.toLowerCase();
-      final hostText = item.metadata.host.toLowerCase();
-      final destinationIPText = item.metadata.destinationIP.toLowerCase();
-      final processText = item.metadata.process.toLowerCase();
-      final chainsText = item.chains.join('').toLowerCase();
-      final matchesQuery = networkText.contains(query) ||
-          hostText.contains(query) ||
-          destinationIPText.contains(query) ||
-          processText.contains(query) ||
-          chainsText.contains(query);
-      if (!matchesQuery) return false;
-    }
-    if (keywords.isNotEmpty) {
-      final chains = item.chains;
-      final process = item.metadata.process;
-      final matchesKeywords = {...chains, process}.containsAll(keywords);
-      if (!matchesKeywords) return false;
-    }
-    return true;
-  }).toList();
+  final filtered = _filterTrackerInfos(
+    connections,
+    query: query,
+    keywords: keywords,
+  );
+  return _sortTrackerInfos(filtered, sortType, activeIds: activeIds);
+});
+
+final filteredConnectionsProvider = Provider<List<TrackerInfo>>((ref) {
+  final tab = ref.watch(connectionsTabProvider);
+  return switch (tab) {
+    ConnectionsTab.all => ref.watch(filteredAllConnectionsProvider),
+    ConnectionsTab.active => ref.watch(filteredActiveConnectionsProvider),
+  };
 });

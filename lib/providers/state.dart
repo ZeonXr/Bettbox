@@ -189,8 +189,11 @@ VpnState vpnState(Ref ref) {
 
 @riverpod
 NavigationState navigationState(Ref ref) {
-  final pageLabel = ref.watch(currentPageLabelProvider);
+  final currentPageLabel = ref.watch(currentPageLabelProvider);
   final navigationItems = ref.watch(currentNavigationItemsStateProvider).value;
+  final pageLabel = currentPageLabel == PageLabel.requests
+      ? PageLabel.connections
+      : currentPageLabel;
   final viewMode = ref.watch(viewModeProvider);
   final locale = ref.watch(appSettingProvider).locale;
   final index = navigationItems.lastIndexWhere(
