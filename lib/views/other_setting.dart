@@ -17,36 +17,19 @@ class SmartAutoStopItem extends ConsumerWidget {
     final smartAutoStop = ref.watch(
       vpnSettingProvider.select((state) => state.smartAutoStop),
     );
-    final isQuickResponseEnabled =
-        system.isAndroid &&
-        ref.watch(vpnSettingProvider.select((state) => state.quickResponse));
 
     return ListItem.switchItem(
       title: Text(appLocalizations.smartAutoStop),
       subtitle: Text(appLocalizations.smartAutoStopDesc),
       delegate: SwitchDelegate(
         value: smartAutoStop,
-        onChanged: isQuickResponseEnabled
-            ? null
-            : (bool value) async {
-                ref
-                    .read(vpnSettingProvider.notifier)
-                    .updateState(
-                      (state) => state.copyWith(
-                        smartAutoStop: value,
-                        quickResponse: value ? false : state.quickResponse,
-                      ),
-                    );
-
-                if (system.isAndroid) {
-                  if (value) {
-                    await service?.setQuickResponse(false);
-                  } else {
-                    // When turning off smart auto stop, no need to auto-turn-on quickResponse
-                    // User has to explicitly turn it on.
-                  }
-                }
-              },
+        onChanged: (bool value) async {
+          ref
+              .read(vpnSettingProvider.notifier)
+              .updateState(
+                (state) => state.copyWith(smartAutoStop: value),
+              );
+        },
       ),
     );
   }
@@ -169,31 +152,23 @@ class QuickResponseItem extends ConsumerWidget {
     final quickResponse = ref.watch(
       vpnSettingProvider.select((state) => state.quickResponse),
     );
-    final isSmartAutoStopEnabled = ref.watch(
-      vpnSettingProvider.select((state) => state.smartAutoStop),
-    );
 
     return ListItem.switchItem(
       title: Text(appLocalizations.quickResponse),
       subtitle: Text(appLocalizations.quickResponseDesc),
       delegate: SwitchDelegate(
         value: quickResponse,
-        onChanged: isSmartAutoStopEnabled
-            ? null
-            : (bool value) async {
-                ref
-                    .read(vpnSettingProvider.notifier)
-                    .updateState(
-                      (state) => state.copyWith(
-                        quickResponse: value,
-                        smartAutoStop: value ? false : state.smartAutoStop,
-                      ),
-                    );
+        onChanged: (bool value) async {
+          ref
+              .read(vpnSettingProvider.notifier)
+              .updateState(
+                (state) => state.copyWith(quickResponse: value),
+              );
 
-                if (system.isAndroid) {
-                  await service?.setQuickResponse(value);
-                }
-              },
+          if (system.isAndroid) {
+            await service?.setQuickResponse(value);
+          }
+        },
       ),
     );
   }
