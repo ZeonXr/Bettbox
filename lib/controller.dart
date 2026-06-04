@@ -46,7 +46,9 @@ class AppController {
 
   void setupClashConfigDebounce() {
     debouncer.call(FunctionTag.setupClashConfig, () async {
-      await setupClashConfig();
+      await safeRun(() async {
+        await setupClashConfig();
+      }, needLoading: true);
     });
   }
 
@@ -143,11 +145,15 @@ class AppController {
       await globalState.handleStart([updateRunTime, updateTraffic]);
 
       Future.microtask(() async {
-        final res = await _requestAdmin(true);
-        if (res.needRestart) {
-          await restartCore();
-        } else if (!res.isError) {
-          await _updateClashConfig();
+        try {
+          final res = await _requestAdmin(true);
+          if (res.needRestart) {
+            await restartCore();
+          } else if (!res.isError) {
+            await _updateClashConfig();
+          }
+        } catch (e) {
+          commonPrint.log('FastStart update config failed: $e');
         }
         _backgroundLoad();
       });
@@ -472,10 +478,11 @@ class AppController {
   Future<void> setupClashConfig() async {
     await safeRun(() async {
       await _setupCoreConfig();
-    }, needLoading: true);
+    }, needLoading: false);
   }
 
   Future _applyProfile() async {
+    _backgroundLoadVersion++;
     await clashCore.requestGc();
     await setupClashConfig();
     await updateGroups();
@@ -2022,7 +2029,9 @@ class AppController {
       }
       return null;
     } finally {
-      _ref.read(loadingProvider.notifier).value = false;
+      if (needLoading) {
+        _ref.read(loadingProvider.notifier).value = false;
+      }
     }
   }
 
