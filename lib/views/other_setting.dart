@@ -32,7 +32,6 @@ class NetworkMatchItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final smartAutoStopNetworks = ref.watch(vpnSettingProvider.select((s) => s.smartAutoStopNetworks));
-    final isQuickResponseEnabled = system.isAndroid && ref.watch(vpnSettingProvider.select((s) => s.quickResponse));
 
     return ListItem.input(
       title: Text(appLocalizations.networkMatch),
@@ -40,13 +39,11 @@ class NetworkMatchItem extends ConsumerWidget {
       delegate: InputDelegate(
         title: appLocalizations.networkMatch,
         value: smartAutoStopNetworks,
-        onChanged: isQuickResponseEnabled
-            ? null
-            : (value) {
-                if (value != null) {
-                  ref.read(vpnSettingProvider.notifier).updateState((s) => s.copyWith(smartAutoStopNetworks: value));
-                }
-              },
+        onChanged: (value) {
+          if (value != null) {
+            ref.read(vpnSettingProvider.notifier).updateState((s) => s.copyWith(smartAutoStopNetworks: value));
+          }
+        },
         validator: (value) {
           if (value == null || value.isEmpty) return null;
           return NetworkMatcher.getValidationError(
@@ -227,13 +224,28 @@ class BatteryOptimizationItem extends ConsumerStatefulWidget {
   ConsumerState<BatteryOptimizationItem> createState() => _BatteryOptimizationItemState();
 }
 
-class _BatteryOptimizationItemState extends ConsumerState<BatteryOptimizationItem> {
+class _BatteryOptimizationItemState extends ConsumerState<BatteryOptimizationItem>
+    with WidgetsBindingObserver {
   bool? _isIgnoring;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkStatus();
+    }
   }
 
   Future<void> _checkStatus() async {
@@ -247,57 +259,36 @@ class _BatteryOptimizationItemState extends ConsumerState<BatteryOptimizationIte
     }
   }
 
-  Future<void> _handleTap(BuildContext context) async {
-    try {
-      final isIgnoring = await app.isIgnoringBatteryOptimizations();
-      if (mounted) {
-        setState(() => _isIgnoring = isIgnoring);
-      }
+  Future<void> _handleSwitchChanged(BuildContext context, bool value) async {
+    final isIgnoring = _isIgnoring;
+    if (isIgnoring == null) return;
 
-      if (isIgnoring) {
-        if (context.mounted) {
-          context.showSnackBar(appLocalizations.alreadyInWhitelist);
-        }
-      } else {
+    if (isIgnoring) {
+      if (context.mounted) {
+        context.showSnackBar(appLocalizations.alreadyInWhitelist);
+      }
+      setState(() {});
+    } else {
+      try {
         await app.requestIgnoreBatteryOptimizations();
         await _checkStatus();
+      } catch (e) {
+        commonPrint.log('Battery optimization error: $e');
       }
-    } catch (e) {
-      commonPrint.log('Battery optimization error: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.colorScheme;
     final isIgnoring = _isIgnoring;
 
-    Widget? trailing;
-    if (isIgnoring != null) {
-      final label = isIgnoring ? appLocalizations.authorized : appLocalizations.unauthorized;
-      final bgColor = isIgnoring ? theme.primaryContainer : Colors.red;
-      final fgColor = isIgnoring ? theme.onPrimaryContainer : Colors.white;
-      trailing = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          label,
-          style: context.textTheme.labelMedium?.copyWith(
-            color: fgColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-    }
-
-    return ListItem(
+    return ListItem.switchItem(
       title: Text(appLocalizations.batteryOptimization),
       subtitle: Text(appLocalizations.batteryOptimizationDesc),
-      trailing: trailing,
-      onTap: () => _handleTap(context),
+      delegate: SwitchDelegate(
+        value: isIgnoring ?? false,
+        onChanged: (value) => _handleSwitchChanged(context, value),
+      ),
     );
   }
 }
