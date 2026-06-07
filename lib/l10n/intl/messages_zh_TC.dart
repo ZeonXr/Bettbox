@@ -37,7 +37,7 @@ class MessageLookup extends MessageLookupByLibrary {
   static String m7(label) => "${label} 必須在 1024 到 49151 之間, 0為關閉";
 
   static String m8(statusCode) =>
-      "配置導入失敗，請檢查網路問題並嘗試重置訂閱連結(HTTP錯誤代碼: ${statusCode})";
+      "配置導入失敗，請检查網路問題並嘗試重置訂閱連結(HTTP錯誤代碼: ${statusCode})";
 
   static String m9(count) => "已選擇 ${count} 項";
 
@@ -91,6 +91,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "appDesc": MessageLookupByLibrary.simpleMessage("處理應用相關設定"),
     "application": MessageLookupByLibrary.simpleMessage("應用程式"),
     "applicationDesc": MessageLookupByLibrary.simpleMessage("修改應用程式設定"),
+    "authorized": MessageLookupByLibrary.simpleMessage("已授權"),
     "auto": MessageLookupByLibrary.simpleMessage("自動"),
     "autoCheckUpdate": MessageLookupByLibrary.simpleMessage("自動檢查更新"),
     "autoCheckUpdateDesc": MessageLookupByLibrary.simpleMessage("應用啟動時自動檢查更新"),
@@ -782,6 +783,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "unableToUpdateCurrentProfileDesc": MessageLookupByLibrary.simpleMessage(
       "無法更新目前的設定檔",
     ),
+    "unauthorized": MessageLookupByLibrary.simpleMessage("未授權"),
     "undo": MessageLookupByLibrary.simpleMessage("復原"),
     "unifiedDelay": MessageLookupByLibrary.simpleMessage("統一延遲"),
     "unifiedDelayDesc": MessageLookupByLibrary.simpleMessage("去除交握解析等額外延遲"),
