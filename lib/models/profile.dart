@@ -68,12 +68,13 @@ abstract class Profile with _$Profile {
   factory Profile.fromJson(Map<String, Object?> json) =>
       _$ProfileFromJson(json);
 
-  factory Profile.normal({String? label, String url = ''}) {
+  factory Profile.normal({String? label, String url = '', String? ageSecretKey}) {
     return Profile(
       label: label,
       url: url,
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       autoUpdateDuration: defaultUpdateDuration,
+      ageSecretKey: ageSecretKey,
     );
   }
 }

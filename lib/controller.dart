@@ -1109,7 +1109,7 @@ class AppController {
     return;
   }
 
-  Future<void> addProfileFormURL(String url) async {
+  Future<void> addProfileFormURL(String url, {String? ageSecretKey}) async {
     if (globalState.navigatorKey.currentState?.canPop() ?? false) {
       globalState.navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
@@ -1117,7 +1117,7 @@ class AppController {
 
     final profile = await safeRun(
       () async {
-        return await Profile.normal(url: url).update();
+        return await Profile.normal(url: url, ageSecretKey: ageSecretKey).update();
       },
       needLoading: true,
       title: '${appLocalizations.add}${appLocalizations.profile}',
