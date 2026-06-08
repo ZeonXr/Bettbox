@@ -241,10 +241,14 @@ class ClashLibHandler {
     return DateTime.fromMillisecondsSinceEpoch(int.parse(runTimeString));
   }
 
-  Future<Map<String, dynamic>> getConfig(String id) async {
+  Future<Map<String, dynamic>> getConfig(String id, {String? ageSecretKey}) async {
     final path = await appPath.getProfilePath(id);
+    final params = {
+      'path': path,
+      'age-secret-key': ageSecretKey ?? '',
+    };
     return using((arena) {
-      final pathChar = path.toNativeUtf8(allocator: arena).cast<Char>();
+      final pathChar = json.encode(params).toNativeUtf8(allocator: arena).cast<Char>();
       final configRaw = clashFFI.getConfig(pathChar);
       final configString = configRaw.cast<Utf8>().toDartString();
       clashFFI.freeCString(configRaw);
