@@ -18,7 +18,7 @@ class SingleInstanceLock {
       try {
         final lockFilePath = await appPath.lockFilePath;
         commonPrint.log(
-          'SingleInstanceLock acquire: flavor=${AppFlavor.value}, lock=$lockFilePath',
+          'SingleInstanceLock acquire: dev=${AppIdentity.isDev}, lock=$lockFilePath',
         );
         final lockFile = File(lockFilePath);
         await lockFile.create(recursive: true);

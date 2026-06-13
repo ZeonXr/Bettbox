@@ -130,7 +130,7 @@ class System {
   Future<void> setProcessPriority(String processName, bool enable) async {
     if (!isWindows) return;
     
-    if (processName == '${AppFlavor.mainExecutableName}.exe') {
+    if (processName == '${AppIdentity.mainExecutableName}.exe') {
       try {
         windows?.setCurrentProcessPriority(enable);
         return;
@@ -308,7 +308,7 @@ class Windows {
       'create',
       appHelperService,
       'binPath= "${appPath.helperPath}"',
-      'start= ${AppFlavor.isDev ? 'demand' : 'auto'}',
+      'start= ${AppIdentity.isDev ? 'demand' : 'auto'}',
       '&&',
       'reg',
       'add',
@@ -349,7 +349,7 @@ class Windows {
 
   Future<void> stopHelperService() async {
     await helperClient.stopCore();
-    if (!AppFlavor.isDev) return;
+    if (!AppIdentity.isDev) return;
 
     if (await helperClient.stopHelperService()) {
       return;

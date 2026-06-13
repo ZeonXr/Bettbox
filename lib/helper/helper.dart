@@ -5,12 +5,12 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:bett_box/common/flavor.dart';
 import 'package:bett_box/common/helper_auth.dart';
+import 'package:bett_box/common/identity.dart';
 import 'package:ffi/ffi.dart';
 
 const helperProtocolVersion = 1;
-const helperPipeName = AppFlavor.helperPipeName;
+const helperPipeName = WindowsHelperIdentity.pipeName;
 const helperMaxFrameSize = 1024 * 1024;
 const helperDefaultTimeout = Duration(seconds: 5);
 

@@ -15,9 +15,9 @@ class AppPath {
   AppPath._internal() {
     appDirPath = join(dirname(Platform.resolvedExecutable));
     getApplicationSupportDirectory().then((value) {
-      if (system.isWindows && AppFlavor.isDev) {
+      if (system.isWindows && AppIdentity.isDev) {
         dataDir.complete(
-          Directory(join(value.parent.path, AppFlavor.dataDirName)),
+          Directory(join(value.parent.path, AppIdentity.dataDirName)),
         );
       } else {
         dataDir.complete(value);
@@ -48,7 +48,7 @@ class AppPath {
   String get corePath {
     return join(
       executableDirPath,
-      '${AppFlavor.coreExecutableName}$executableExtension',
+      '${AppIdentity.coreExecutableName}$executableExtension',
     );
   }
 
@@ -70,7 +70,7 @@ class AppPath {
   }
 
   String? get _devWorkspacePath {
-    if (!system.isWindows || !AppFlavor.isDev) return null;
+    if (!system.isWindows || !AppIdentity.isDev) return null;
     var directory = Directory(executableDirPath);
     for (var depth = 0; depth < 8; depth++) {
       final pubspecPath = join(directory.path, 'pubspec.yaml');
@@ -96,7 +96,7 @@ class AppPath {
 
   Future<String> get lockFilePath async {
     final directory = await dataDir.future;
-    return join(directory.path, '${AppFlavor.dataDirName}.lock');
+    return join(directory.path, '${AppIdentity.dataDirName}.lock');
   }
 
   Future<String> get sharedPreferencesPath async {

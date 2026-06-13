@@ -81,9 +81,9 @@ class BuildItem {
 }
 
 class Build {
-  static String flavor = 'prod';
+  static bool isDev = false;
 
-  static bool get isDev => flavor == 'dev';
+  static String get identityName => isDev ? '${appName}Dev' : appName;
 
   static List<BuildItem> get buildItems => [
     BuildItem(target: Target.macos, arch: Arch.arm64),
@@ -99,14 +99,9 @@ class Build {
 
   static String get appName => 'Bettbox';
 
-  static String get coreName => 'BettboxCore';
+  static String get coreName => '${identityName}Core';
 
-  static String get devCoreName => 'BettboxDevCore';
-
-  static String get currentCoreName => isDev ? devCoreName : coreName;
-
-  static String get helperName =>
-      isDev ? 'BettboxDevHelperService' : 'BettboxHelperService';
+  static String get helperName => '${identityName}HelperService';
 
   static String get libName => 'libclash';
 
@@ -206,7 +201,7 @@ class Build {
 
       final fileName = isLib
           ? '$libName${item.target.dynamicLibExtensionName}'
-          : '$currentCoreName${item.target.executableExtensionName}';
+          : '$coreName${item.target.executableExtensionName}';
       final outPath = join(outFileDir, fileName);
       corePaths.add(outPath);
 
@@ -528,16 +523,13 @@ class BuildCommand extends Command {
     final sentryArg = sentryDsn.isNotEmpty
         ? ' --build-dart-define=SENTRY_DSN=$sentryDsn'
         : '';
-
-    final flavorArg = target == Target.windows
-        ? ''
-        : ' --build-flavor=${Build.flavor}';
+    final appDevArg = Build.isDev ? ' --build-dart-define=APP_DEV=true' : '';
 
     await Build.getDistributor();
     await Build.exec(
       name: name,
       Build.getExecutable(
-        'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose$args$sentryArg$flavorArg --build-dart-define=APP_ENV=$env --build-dart-define=APP_FLAVOR=${Build.flavor}',
+        'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose$args$sentryArg --build-dart-define=APP_ENV=$env$appDevArg',
       ),
     );
   }
@@ -604,7 +596,7 @@ class BuildCommand extends Command {
       outputs.add(
         join(
           outFileDir,
-          '${Build.currentCoreName}${target.executableExtensionName}',
+          '${Build.coreName}${target.executableExtensionName}',
         ),
       );
 
@@ -667,8 +659,7 @@ class BuildCommand extends Command {
     final String out = argResults?['out'] ?? (target.same ? 'app' : 'core');
     final archName = argResults?['arch'];
     final env = argResults?['env'] ?? 'pre';
-    final bool dev = argResults?['dev'] ?? false;
-    Build.flavor = dev ? 'dev' : 'prod';
+    Build.isDev = argResults?['dev'] ?? false;
     final arch = await _resolveArch(archName);
 
     if (arch == null && target != Target.android) {

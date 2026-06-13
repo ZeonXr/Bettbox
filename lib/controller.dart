@@ -683,9 +683,9 @@ class AppController {
     if (!system.isWindows) return;
     
     try {
-      await system.setProcessPriority('${AppFlavor.mainExecutableName}.exe', enable);
+      await system.setProcessPriority('${AppIdentity.mainExecutableName}.exe', enable);
       await helperClient.setProcessPriority(
-        '${AppFlavor.coreExecutableName}.exe',
+        '${AppIdentity.coreExecutableName}.exe',
         enable,
       );
     } catch (e) {

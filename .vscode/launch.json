@@ -10,7 +10,7 @@
       "deviceId": "windows",
       "toolArgs": [
         "--dart-define",
-        "APP_FLAVOR=dev"
+        "APP_DEV=true"
       ],
       "preLaunchTask": "bettbox: ensure windows dev core"
     },
@@ -23,7 +23,7 @@
       "deviceId": "macos",
       "toolArgs": [
         "--dart-define",
-        "APP_FLAVOR=dev"
+        "APP_DEV=true"
       ],
       "preLaunchTask": "bettbox: ensure macos dev core"
     },
@@ -36,7 +36,7 @@
       "deviceId": "linux",
       "toolArgs": [
         "--dart-define",
-        "APP_FLAVOR=dev"
+        "APP_DEV=true"
       ],
       "preLaunchTask": "bettbox: ensure linux dev core"
     },
@@ -48,7 +48,7 @@
       "program": "lib/main.dart",
       "toolArgs": [
         "--dart-define",
-        "APP_FLAVOR=dev"
+        "APP_DEV=true"
       ],
       "preLaunchTask": "bettbox: ensure android x64 core"
     },
@@ -60,7 +60,7 @@
       "program": "lib/main.dart",
       "toolArgs": [
         "--dart-define",
-        "APP_FLAVOR=dev"
+        "APP_DEV=true"
       ],
       "preLaunchTask": "bettbox: ensure android arm64 core"
     }
