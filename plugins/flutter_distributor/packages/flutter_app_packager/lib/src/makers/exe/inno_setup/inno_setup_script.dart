@@ -86,6 +86,15 @@ class InnoSetupScript {
   final MakeExeConfig makeConfig;
 
   Future<File> createFile() async {
+    final isDev = makeConfig.flavor == 'dev';
+    final coreExecutableName = isDev ? 'BettboxDevCore.exe' : 'BettboxCore.exe';
+    final helperExecutableName = isDev
+        ? 'BettboxDevHelperService.exe'
+        : 'BettboxHelperService.exe';
+    final helperServiceName = isDev
+        ? 'BettboxDevHelperService'
+        : 'BettboxHelperService';
+    final taskName = isDev ? 'Bettbox Dev' : 'Bettbox';
     Map<String, dynamic> variables = {
       'APP_ID': makeConfig.appId,
       'APP_NAME': makeConfig.appName,
@@ -105,6 +114,10 @@ class InnoSetupScript {
       'LOCALES': makeConfig.locales,
       'SETUP_ICON_FILE': makeConfig.setupIconFile ?? '',
       'PRIVILEGES_REQUIRED': makeConfig.privilegesRequired ?? 'none',
+      'CORE_EXECUTABLE_NAME': coreExecutableName,
+      'HELPER_EXECUTABLE_NAME': helperExecutableName,
+      'HELPER_SERVICE_NAME': helperServiceName,
+      'TASK_NAME': taskName,
     }..removeWhere((key, value) => value == null);
 
     Context context = Context.create();

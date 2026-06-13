@@ -15,16 +15,29 @@ use windows_service::{
     service_dispatcher, Result,
 };
 
-const SERVICE_NAME: &str = "BettboxHelperService";
+const DEFAULT_SERVICE_NAME: &str = "BettboxHelperService";
 
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
+
+fn service_name() -> String {
+    std::env::var("HELPER_SERVICE_NAME").unwrap_or_else(|_| {
+        std::env::current_exe()
+            .ok()
+            .and_then(|path| {
+                path.file_stem()
+                    .map(|stem| stem.to_string_lossy().to_string())
+            })
+            .filter(|stem| stem.contains("Dev"))
+            .unwrap_or_else(|| DEFAULT_SERVICE_NAME.to_string())
+    })
+}
 
 pub fn main() -> Result<()> {
     start_service()
 }
 
 pub fn start_service() -> Result<()> {
-    service_dispatcher::start(SERVICE_NAME, service_entry)
+    service_dispatcher::start(service_name(), service_entry)
 }
 
 define_windows_service!(service_entry, service_main);
@@ -49,8 +62,9 @@ pub fn service_main(_arguments: Vec<OsString>) {
 }
 
 async fn run_windows_service() -> anyhow::Result<()> {
+    let service_name = service_name();
     let status_handle = service_control_handler::register(
-        SERVICE_NAME,
+        service_name,
         move |event| -> ServiceControlHandlerResult {
             match event {
                 ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,

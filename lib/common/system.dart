@@ -6,6 +6,7 @@ import 'package:ffi/ffi.dart';
 import 'package:bett_box/common/common.dart';
 import 'package:bett_box/common/helper_auth.dart';
 import 'package:bett_box/enum/enum.dart';
+import 'package:bett_box/helper/helper.dart';
 import 'package:bett_box/plugins/app.dart';
 import 'package:bett_box/state.dart';
 import 'package:bett_box/widgets/input.dart';
@@ -129,7 +130,7 @@ class System {
   Future<void> setProcessPriority(String processName, bool enable) async {
     if (!isWindows) return;
     
-    if (processName == 'Bettbox.exe') {
+    if (processName == '${AppFlavor.mainExecutableName}.exe') {
       try {
         windows?.setCurrentProcessPriority(enable);
         return;
@@ -237,117 +238,124 @@ class Windows {
     return result > 32;
   }
 
-  Future<void> _killProcess(int port) async {
-    final result = await Process.run('netstat', ['-ano']);
-    final lines = result.stdout.toString().trim().split('\n');
-    for (final line in lines) {
-      if (!line.contains(':$port') || !line.contains('LISTENING')) continue;
-      final parts = line.trim().split(RegExp(r'\s+'));
-      final pid = int.tryParse(parts.last);
-      if (pid != null) {
-        await Process.run('taskkill', ['/PID', pid.toString(), '/F']);
-      }
-    }
-  }
-
   Future<WindowsHelperServiceStatus> checkService() async {
+    await HelperAuthManager.ensureAuthKey();
     final result = await Process.run('sc', ['query', appHelperService]);
     if (result.exitCode != 0) return WindowsHelperServiceStatus.none;
 
     final output = result.stdout.toString();
     if (!output.contains('RUNNING')) return WindowsHelperServiceStatus.presence;
 
-    final isReachable = await request.quickPingHelper();
-    return isReachable
+    return await _pingHelper()
         ? WindowsHelperServiceStatus.running
         : WindowsHelperServiceStatus.presence;
   }
 
-  Future<bool> registerService() async {
-    final createdNewKey = await HelperAuthManager.ensureAuthKey();
+  Future<bool>? _registerServiceInFlight;
+
+  Future<bool> registerService() {
+    return _registerServiceInFlight ??= _registerService().whenComplete(
+      () => _registerServiceInFlight = null,
+    );
+  }
+
+  Future<bool> _registerService() async {
+    await HelperAuthManager.ensureAuthKey();
+    if (await _isHelperHealthy()) return true;
+
+    if (!await _configureHelperService()) return false;
+
+    return _waitForHelperHealthy();
+  }
+
+  Future<bool> _isHelperHealthy() async {
+    final result = await Process.run('sc', ['query', appHelperService]);
+    if (result.exitCode != 0) return false;
+
+    if (!result.stdout.toString().contains('RUNNING')) return false;
+
+    return _pingHelper();
+  }
+
+  Future<bool> _pingHelper() async {
+    final coreSHA256 = globalState.coreSHA256;
+    if (coreSHA256 == null || coreSHA256.isEmpty) return false;
+    return helperClient.ping(coreSHA256);
+  }
+
+  Future<bool> _configureHelperService() async {
     final authKey = HelperAuthManager.getAuthKey();
+    if (authKey == null) return false;
 
-    final quickCheck = await Process.run('sc', ['query', appHelperService]);
-    if (quickCheck.exitCode == 0 &&
-        quickCheck.stdout.toString().contains('RUNNING')) {
-      final isReachable = await request.quickPingHelper();
-      if (isReachable) {
-        if (createdNewKey && authKey != null) {
-          await _restartServiceWithAuthKey(authKey);
-        }
-        return true;
-      }
-    }
-
-    final status = await checkService();
-    if (status == WindowsHelperServiceStatus.running) {
-      if (createdNewKey && authKey != null) {
-        await _restartServiceWithAuthKey(authKey);
-      }
-      return true;
-    }
-
-    await _killProcess(helperPort);
+    final serviceRegistryPath =
+        'HKLM\\SYSTEM\\CurrentControlSet\\Services\\$appHelperService';
 
     final command = [
       '/c',
-      if (status == WindowsHelperServiceStatus.presence) ...[
-        'sc',
-        'delete',
-        appHelperService,
-        '/force',
-        '&&',
-      ],
+      'sc',
+      'stop',
+      appHelperService,
+      '>nul',
+      '2>&1',
+      '&',
+      'sc',
+      'delete',
+      appHelperService,
+      '>nul',
+      '2>&1',
+      '&',
       'sc',
       'create',
       appHelperService,
       'binPath= "${appPath.helperPath}"',
-      'start= auto',
+      'start= ${AppFlavor.isDev ? 'demand' : 'auto'}',
       '&&',
-      if (authKey != null) ...[
-        'sc',
-        'config',
-        appHelperService,
-        'Environment= HELPER_AUTH_KEY=$authKey',
-        '&&',
-      ],
+      'reg',
+      'add',
+      '"$serviceRegistryPath"',
+      '/v',
+      'Environment',
+      '/t',
+      'REG_MULTI_SZ',
+      '/d',
+      '"HELPER_AUTH_KEY=$authKey\\0HELPER_SERVICE_NAME=$appHelperService\\0HELPER_PIPE_NAME=$helperPipeName"',
+      '/f',
+      '&&',
       'sc',
       'start',
       appHelperService,
     ].join(' ');
 
-    final res = runas('cmd.exe', command);
+    return runas('cmd.exe', command);
+  }
 
-    for (int i = 0; i < 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      if (await request.quickPingHelper()) return true;
-      if (i > 0 && i % 4 == 0) {
+  Future<bool> _waitForHelperHealthy() async {
+    for (var attempt = 0; attempt < 20; attempt++) {
+      await Future.delayed(const Duration(milliseconds: 250));
+      if (await _isHelperHealthy()) return true;
+
+      if (attempt > 0 && attempt % 4 == 0) {
         final check = await Process.run('sc', ['query', appHelperService]);
-        final out = check.stdout.toString();
-        if (out.contains('STOPPED') || out.contains('FAILED')) {
+        final output = check.stdout.toString();
+        if (output.contains('STOPPED')) {
           commonPrint.log('Helper service stopped/failed, skipping wait');
           break;
         }
       }
     }
 
-    return res;
+    return false;
   }
 
-  Future<void> _restartServiceWithAuthKey(String authKey) async {
-    try {
-      await Process.run('sc', ['stop', appHelperService]);
-      await Future.delayed(Duration(milliseconds: 500));
-      await Process.run('sc', [
-        'config',
-        appHelperService,
-        'Environment= HELPER_AUTH_KEY=$authKey',
-      ]);
-      await Process.run('sc', ['start', appHelperService]);
-      await Future.delayed(Duration(milliseconds: 500));
-    } catch (e) {
-      commonPrint.log('Failed to restart service with auth key: $e');
+  Future<void> stopHelperService() async {
+    await helperClient.stopCore();
+    if (!AppFlavor.isDev) return;
+
+    if (await helperClient.stopHelperService()) {
+      return;
     }
+
+    await Process.run('sc', ['stop', appHelperService]);
   }
 
   Future<bool> registerTask(

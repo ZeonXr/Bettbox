@@ -15,7 +15,13 @@ class AppPath {
   AppPath._internal() {
     appDirPath = join(dirname(Platform.resolvedExecutable));
     getApplicationSupportDirectory().then((value) {
-      dataDir.complete(value);
+      if (system.isWindows && AppFlavor.isDev) {
+        dataDir.complete(
+          Directory(join(value.parent.path, AppFlavor.dataDirName)),
+        );
+      } else {
+        dataDir.complete(value);
+      }
     });
     getTemporaryDirectory().then((value) {
       tempDir.complete(value);
@@ -40,11 +46,42 @@ class AppPath {
   }
 
   String get corePath {
-    return join(executableDirPath, 'BettboxCore$executableExtension');
+    return join(
+      executableDirPath,
+      '${AppFlavor.coreExecutableName}$executableExtension',
+    );
   }
 
   String get helperPath {
+    final devWorkspacePath = _devWorkspacePath;
+    if (devWorkspacePath != null) {
+      final helperPath = join(
+        devWorkspacePath,
+        'libclash',
+        'windows',
+        '$appHelperService$executableExtension',
+      );
+      if (File(helperPath).existsSync()) {
+        return helperPath;
+      }
+    }
+
     return join(executableDirPath, '$appHelperService$executableExtension');
+  }
+
+  String? get _devWorkspacePath {
+    if (!system.isWindows || !AppFlavor.isDev) return null;
+    var directory = Directory(executableDirPath);
+    for (var depth = 0; depth < 8; depth++) {
+      final pubspecPath = join(directory.path, 'pubspec.yaml');
+      if (File(pubspecPath).existsSync()) return directory.path;
+
+      final parent = directory.parent;
+      if (parent.path == directory.path) break;
+      directory = parent;
+    }
+
+    return null;
   }
 
   Future<String> get downloadDirPath async {
@@ -59,7 +96,7 @@ class AppPath {
 
   Future<String> get lockFilePath async {
     final directory = await dataDir.future;
-    return join(directory.path, 'Bettbox.lock');
+    return join(directory.path, '${AppFlavor.dataDirName}.lock');
   }
 
   Future<String> get sharedPreferencesPath async {

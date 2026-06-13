@@ -8,15 +8,14 @@ import 'package:bett_box/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:silky_scroll/silky_scroll.dart';
 
-const appName = 'Bettbox';
-const appHelperService = 'BettboxHelperService';
+const appName = AppFlavor.appName;
+const appHelperService = AppFlavor.helperService;
 const coreName = 'clash.meta';
-const tunDeviceName = 'Bettbox';
+const tunDeviceName = AppFlavor.tunDeviceName;
 const browserUa =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36';
-const packageName = 'com.appshub.bettbox';
+const packageName = AppFlavor.packageName;
 final unixSocketPath = '/tmp/BettboxSocket_${Random().nextInt(10000)}.sock';
-const helperPort = 45678;
 const maxTextScale = 1.4;
 const minTextScale = 0.8;
 final baseInfoEdgeInsets = EdgeInsets.symmetric(

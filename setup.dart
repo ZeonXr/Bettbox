@@ -81,6 +81,10 @@ class BuildItem {
 }
 
 class Build {
+  static String flavor = 'prod';
+
+  static bool get isDev => flavor == 'dev';
+
   static List<BuildItem> get buildItems => [
     BuildItem(target: Target.macos, arch: Arch.arm64),
     BuildItem(target: Target.macos, arch: Arch.amd64),
@@ -96,6 +100,13 @@ class Build {
   static String get appName => 'Bettbox';
 
   static String get coreName => 'BettboxCore';
+
+  static String get devCoreName => 'BettboxDevCore';
+
+  static String get currentCoreName => isDev ? devCoreName : coreName;
+
+  static String get helperName =>
+      isDev ? 'BettboxDevHelperService' : 'BettboxHelperService';
 
   static String get libName => 'libclash';
 
@@ -166,8 +177,8 @@ class Build {
     if (!await file.exists()) {
       throw 'File not exists';
     }
-    final stream = file.openRead();
-    return sha256.convert(await stream.reduce((a, b) => a + b)).toString();
+    final digest = await sha256.bind(file.openRead()).first;
+    return digest.toString();
   }
 
   static Future<List<String>> buildCore({
@@ -195,7 +206,7 @@ class Build {
 
       final fileName = isLib
           ? '$libName${item.target.dynamicLibExtensionName}'
-          : '$coreName${item.target.executableExtensionName}';
+          : '$currentCoreName${item.target.executableExtensionName}';
       final outPath = join(outFileDir, fileName);
       corePaths.add(outPath);
 
@@ -264,7 +275,7 @@ class Build {
     final targetPath = join(
       outDir,
       target.name,
-      'BettboxHelperService${target.executableExtensionName}',
+      '$helperName${target.executableExtensionName}',
     );
     await File(outPath).copy(targetPath);
   }
@@ -324,11 +335,18 @@ class BuildCommand extends Command {
     if (target == Target.android || target == Target.linux) {
       argParser.addOption(
         'arch',
-        valueHelp: arches.map((e) => e.name).join(','),
+        valueHelp: [
+          if (target != Target.android) 'auto',
+          ...arches.map((e) => e.name),
+        ].join(','),
         help: 'The $name build desc',
       );
     } else {
-      argParser.addOption('arch', help: 'The $name build archName');
+      argParser.addOption(
+        'arch',
+        valueHelp: ['auto', ...arches.map((e) => e.name)].join(','),
+        help: 'The $name build archName',
+      );
     }
     argParser.addOption(
       'out',
@@ -340,9 +358,14 @@ class BuildCommand extends Command {
       valueHelp: ['pre', 'stable'].join(','),
       help: 'The $name build env',
     );
+    argParser.addFlag('dev', help: 'Use dev application identity flavor');
     argParser.addFlag(
       'compatible',
       help: 'Build with GOAMD64=v2 for broader compatibility on amd64',
+    );
+    argParser.addFlag(
+      'ensure',
+      help: 'Skip building when the requested output already exists',
     );
   }
 
@@ -506,23 +529,136 @@ class BuildCommand extends Command {
         ? ' --build-dart-define=SENTRY_DSN=$sentryDsn'
         : '';
 
+    final flavorArg = target == Target.windows
+        ? ''
+        : ' --build-flavor=${Build.flavor}';
+
     await Build.getDistributor();
     await Build.exec(
       name: name,
       Build.getExecutable(
-        'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose$args$sentryArg --build-dart-define=APP_ENV=$env',
+        'flutter_distributor package --skip-clean --platform ${target.name} --targets $targets --flutter-build-args=verbose$args$sentryArg$flavorArg --build-dart-define=APP_ENV=$env --build-dart-define=APP_FLAVOR=${Build.flavor}',
       ),
     );
   }
 
   Future<String?> get systemArch async {
     if (Platform.isWindows) {
-      return Platform.environment['PROCESSOR_ARCHITECTURE'];
+      return Platform.environment['PROCESSOR_ARCHITEW6432'] ??
+          Platform.environment['PROCESSOR_ARCHITECTURE'];
     } else if (Platform.isLinux || Platform.isMacOS) {
       final result = await Process.run('uname', ['-m']);
       return result.stdout.toString().trim();
     }
     return null;
+  }
+
+  Future<Arch> _resolveCurrentMachineArch() async {
+    if (target == Target.android) {
+      throw '--arch auto is not supported for android; choose the device ABI explicitly';
+    }
+    if (!target.same) {
+      throw '--arch auto can only be used for the current host platform';
+    }
+
+    final value = (await systemArch)?.toLowerCase();
+    if (value == null || value.isEmpty) {
+      throw 'Unable to detect current machine architecture';
+    }
+
+    if (value.contains('arm64') || value.contains('aarch64')) {
+      return Arch.arm64;
+    }
+    if (value.contains('amd64') || value.contains('x86_64') || value == 'x64') {
+      return Arch.amd64;
+    }
+
+    throw 'Unsupported current machine architecture: $value';
+  }
+
+  Future<Arch?> _resolveArch(String? archName) async {
+    if (archName == 'auto') {
+      return _resolveCurrentMachineArch();
+    }
+    final currentArches = arches
+        .where((element) => element.name == archName)
+        .toList();
+    return currentArches.isEmpty ? null : currentArches.first;
+  }
+
+  List<String> _expectedOutputs(Arch? arch) {
+    final items = Build.buildItems.where((element) {
+      return element.target == target &&
+          (arch == null ? true : element.arch == arch);
+    });
+
+    final outputs = <String>[];
+    for (final item in items) {
+      final outFileDir = join(Build.outDir, item.target.name, item.archName);
+      if (target == Target.android) {
+        outputs.add(join(outFileDir, '${Build.libName}.so'));
+        outputs.add(join(outFileDir, '${Build.libName}.h'));
+        continue;
+      }
+
+      outputs.add(
+        join(
+          outFileDir,
+          '${Build.currentCoreName}${target.executableExtensionName}',
+        ),
+      );
+
+      if (target == Target.windows) {
+        outputs.add(
+          join(
+            outFileDir,
+            '${Build.helperName}${target.executableExtensionName}',
+          ),
+        );
+      }
+    }
+    return outputs;
+  }
+
+  DateTime _latestModified(Iterable<FileSystemEntity> entities) {
+    var latest = DateTime.fromMillisecondsSinceEpoch(0);
+    for (final entity in entities) {
+      if (!entity.existsSync()) continue;
+      final modified = entity.statSync().modified;
+      if (modified.isAfter(latest)) latest = modified;
+    }
+    return latest;
+  }
+
+  DateTime _windowsSourcesLastModified() {
+    final helperDir = Directory(Build._servicesDir);
+    if (!helperDir.existsSync()) {
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+    return _latestModified([
+      File(join(current, 'setup.dart')),
+      ...helperDir.listSync(recursive: true).where((entity) {
+        return entity is File &&
+            !isWithin(join(Build._servicesDir, 'target'), entity.path);
+      }),
+    ]);
+  }
+
+  bool _outputsAreFresh(Arch? arch) {
+    final outputs = _expectedOutputs(arch);
+    if (outputs.isEmpty || !outputs.every((path) => File(path).existsSync())) {
+      return false;
+    }
+
+    if (target == Target.windows) {
+      final latestInput = _windowsSourcesLastModified();
+      final oldestOutput = outputs
+          .map((path) => File(path).statSync().modified)
+          .reduce((a, b) => a.isBefore(b) ? a : b);
+      return !oldestOutput.isBefore(latestInput);
+    }
+
+    return true;
   }
 
   @override
@@ -531,16 +667,23 @@ class BuildCommand extends Command {
     final String out = argResults?['out'] ?? (target.same ? 'app' : 'core');
     final archName = argResults?['arch'];
     final env = argResults?['env'] ?? 'pre';
-    final currentArches = arches
-        .where((element) => element.name == archName)
-        .toList();
-    final arch = currentArches.isEmpty ? null : currentArches.first;
+    final bool dev = argResults?['dev'] ?? false;
+    Build.flavor = dev ? 'dev' : 'prod';
+    final arch = await _resolveArch(archName);
 
     if (arch == null && target != Target.android) {
       throw 'Invalid arch parameter';
     }
 
     final bool compatible = argResults?['compatible'] ?? false;
+    final bool ensure = argResults?['ensure'] ?? false;
+
+    if (ensure && out != 'app') {
+      if (_outputsAreFresh(arch)) {
+        print('${target.name} core output already exists');
+        return;
+      }
+    }
 
     final corePaths = await Build.buildCore(
       target: target,
@@ -550,17 +693,24 @@ class BuildCommand extends Command {
     );
 
     if (out != 'app') {
+      if (target == Target.windows) {
+        final token = await Build.calcSha256(corePaths.first);
+        await Build.buildHelper(target, token);
+      }
       return;
     }
 
-    final String desc = compatible ? '$archName-compatible' : (archName ?? '');
+    final resolvedArchName = arch?.name ?? archName;
+    final String desc = compatible
+        ? '$resolvedArchName-compatible'
+        : (resolvedArchName ?? '');
 
     switch (target) {
       case Target.windows:
         final token = target != Target.android
             ? await Build.calcSha256(corePaths.first)
             : null;
-        Build.buildHelper(target, token!);
+        await Build.buildHelper(target, token!);
         if (compatible) {
           await _setWindowsCompatibleBuild(true);
         } else {

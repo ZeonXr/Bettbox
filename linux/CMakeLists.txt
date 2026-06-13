@@ -126,6 +126,11 @@ install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
 # libclash.so
 set(CLASH_DIR "../libclash/linux")
 install(PROGRAMS "${CLASH_DIR}/BettboxCore" DESTINATION "${BUILD_BUNDLE_DIR}"
+  CONFIGURATIONS Profile;Release
+  COMPONENT Runtime)
+
+install(PROGRAMS "${CLASH_DIR}/BettboxDevCore" DESTINATION "${BUILD_BUNDLE_DIR}"
+  CONFIGURATIONS Debug
   COMPONENT Runtime)
 
 foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})

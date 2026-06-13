@@ -91,9 +91,15 @@ set(CLASH_DIR "../libclash/windows")
 # endif()
 
 install(PROGRAMS "${CLASH_DIR}/BettboxCore.exe" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  CONFIGURATIONS Profile;Release
   COMPONENT Runtime)
 
 install(PROGRAMS "${CLASH_DIR}/BettboxHelperService.exe" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  CONFIGURATIONS Profile;Release
+  COMPONENT Runtime)
+
+install(PROGRAMS "${CLASH_DIR}/BettboxDevCore.exe" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  CONFIGURATIONS Debug
   COMPONENT Runtime)
 
 install(FILES "WindowsLoopbackManager.exe" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
